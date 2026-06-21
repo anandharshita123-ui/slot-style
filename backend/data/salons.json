@@ -1,0 +1,503 @@
+[
+  {
+    "id": 1,
+    "name": "Saffron Glow Salon",
+    "area": "Saket",
+    "services": ["Facial", "Makeup", "Waxing"],
+    "priceRange": 3500,
+    "rating": 4.6,
+    "category": "Skin & Beauty",
+    "description": "Boutique skin-focused studio offering brightening facials, makeup, and expert waxing in Saket."
+  },
+  {
+    "id": 2,
+    "name": "Aurora Hair Atelier",
+    "area": "Hauz Khas",
+    "services": ["Haircut", "Colour & Balayage", "Blowout"],
+    "priceRange": 4200,
+    "rating": 4.8,
+    "category": "Hair Studio",
+    "description": "Precision cuts and curated balayage blends with a calm, artsy ambience near Hauz Khas."
+  },
+  {
+    "id": 3,
+    "name": "Connaught Care & Style",
+    "area": "Connaught Place",
+    "services": ["Makeup", "Facial", "Manicure"],
+    "priceRange": 2800,
+    "rating": 4.5,
+    "category": "Beauty Lounge",
+    "description": "Event-ready makeup and relaxing facials, plus clean manicure services around Connaught Place."
+  },
+  {
+    "id": 4,
+    "name": "Greater Kailash Derm Studio",
+    "area": "Greater Kailash",
+    "services": ["Facial", "Massage", "Waxing"],
+    "priceRange": 3900,
+    "rating": 4.7,
+    "category": "Skin & Wellness",
+    "description": "Skin-first treatments and therapeutic massages tailored to your schedule in GK."
+  },
+  {
+    "id": 5,
+    "name": "Dwarka Radiance Salon",
+    "area": "Dwarka",
+    "services": ["Haircut", "Blowout", "Eyebrows"],
+    "priceRange": 2200,
+    "rating": 4.3,
+    "category": "Hair & Grooming",
+    "description": "Everyday haircuts, smooth blowouts, and neat eyebrow shaping in Dwarka."
+  },
+  {
+    "id": 6,
+    "name": "Rohini Revival Spa",
+    "area": "Rohini",
+    "services": ["Massage", "Facial", "Waxing"],
+    "priceRange": 3100,
+    "rating": 4.4,
+    "category": "Spa & Wellness",
+    "description": "Relaxing spa sessions with facials and waxing services designed for repeat comfort."
+  },
+  {
+    "id": 7,
+    "name": "Karol Bagh Glam & Groom",
+    "area": "Karol Bagh",
+    "services": ["Makeup", "Manicure", "Pedicure"],
+    "priceRange": 2600,
+    "rating": 4.6,
+    "category": "Nails & Makeup",
+    "description": "Trendy makeup looks and salon-grade nail care with hygienic, premium tools."
+  },
+  {
+    "id": 8,
+    "name": "Rajouri Garden StyleWorks",
+    "area": "Rajouri Garden",
+    "services": ["Haircut", "Colour & Balayage", "Keratin Treatment"],
+    "priceRange": 4800,
+    "rating": 4.7,
+    "category": "Hair & Treatments",
+    "description": "Color expertise and smooth keratin treatments with consistent results in Rajouri."
+  },
+  {
+    "id": 9,
+    "name": "South Extension Serenity",
+    "area": "South Extension",
+    "services": ["Massage", "Facial", "Makeup"],
+    "priceRange": 5200,
+    "rating": 4.9,
+    "category": "Luxury Beauty",
+    "description": "High-touch, luxury wellness with facials, calming massages, and curated event makeup."
+  },
+  {
+    "id": 10,
+    "name": "Vasant Kunj Velvet Studio",
+    "area": "Vasant Kunj",
+    "services": ["Facial", "Makeup", "Eyebrows"],
+    "priceRange": 3400,
+    "rating": 4.6,
+    "category": "Beauty Studio",
+    "description": "Clean, elegant facial treatments and detailed eyebrow shaping in Vasant Kunj."
+  },
+  {
+    "id": 11,
+    "name": "Dwarka Dream Nails",
+    "area": "Dwarka",
+    "services": ["Manicure", "Pedicure", "Waxing"],
+    "priceRange": 1700,
+    "rating": 4.2,
+    "category": "Nails & Grooming",
+    "description": "Gentle nail care and quick grooming services ideal for busy days in Dwarka."
+  },
+  {
+    "id": 12,
+    "name": "Hauz Khas Hair & Heat",
+    "area": "Hauz Khas",
+    "services": ["Blowout", "Haircut", "Eyebrows"],
+    "priceRange": 2400,
+    "rating": 4.5,
+    "category": "Hair & Brows",
+    "description": "Bouncy blowouts, balanced haircuts, and crisp eyebrow definition with careful hygiene."
+  },
+  {
+    "id": 13,
+    "name": "Saket Skin & Glow",
+    "area": "Saket",
+    "services": ["Facial", "Waxing", "Massage"],
+    "priceRange": 3600,
+    "rating": 4.7,
+    "category": "Skin & Wellness",
+    "description": "Glow-focused facials and soothing massages with professional waxing in Saket."
+  },
+  {
+    "id": 14,
+    "name": "Connaught Pop Makeup Lab",
+    "area": "Connaught Place",
+    "services": ["Makeup", "Waxing", "Eyebrows"],
+    "priceRange": 3000,
+    "rating": 4.4,
+    "category": "Makeup & Brows",
+    "description": "Makeup for weddings and events plus expert brow work and quick grooming sessions."
+  },
+  {
+    "id": 15,
+    "name": "Greater Kailash Hairline",
+    "area": "Greater Kailash",
+    "services": ["Haircut", "Blowout", "Colour & Balayage"],
+    "priceRange": 4500,
+    "rating": 4.8,
+    "category": "Hair Color",
+    "description": "Natural-looking balayage and polished blowouts with consistent craftsmanship in GK."
+  },
+  {
+    "id": 16,
+    "name": "Rohini Reset Spa",
+    "area": "Rohini",
+    "services": ["Massage", "Facial"],
+    "priceRange": 2800,
+    "rating": 4.3,
+    "category": "Spa & Facial",
+    "description": "Reset your routine with calming massages and hydrating facial treatments."
+  },
+  {
+    "id": 17,
+    "name": "Karol Bagh Hair Craft",
+    "area": "Karol Bagh",
+    "services": ["Haircut", "Blowout", "Makeup"],
+    "priceRange": 2600,
+    "rating": 4.5,
+    "category": "Hair & Makeup",
+    "description": "Chic haircuts and blowouts paired with optional makeup for complete looks."
+  },
+  {
+    "id": 18,
+    "name": "Rajouri Garden Radiant Facial",
+    "area": "Rajouri Garden",
+    "services": ["Facial", "Waxing", "Eyebrows"],
+    "priceRange": 3300,
+    "rating": 4.6,
+    "category": "Beauty Care",
+    "description": "Brightening facials and tidy grooming services in a welcoming Rajouri space."
+  },
+  {
+    "id": 19,
+    "name": "South Extension Silk & Glow",
+    "area": "South Extension",
+    "services": ["Facial", "Makeup", "Massage"],
+    "priceRange": 6100,
+    "rating": 4.9,
+    "category": "Premium Beauty",
+    "description": "Premium skin care and elegant makeup, finished with a relaxing massage ritual."
+  },
+  {
+    "id": 20,
+    "name": "Vasant Kunj Style Lab",
+    "area": "Vasant Kunj",
+    "services": ["Haircut", "Blowout", "Eyebrows"],
+    "priceRange": 2900,
+    "rating": 4.4,
+    "category": "Salon Services",
+    "description": "Fresh haircuts, silky blowouts, and well-shaped brows in Vasant Kunj."
+  },
+  {
+    "id": 21,
+    "name": "Saket Nail & Care",
+    "area": "Saket",
+    "services": ["Manicure", "Pedicure", "Waxing"],
+    "priceRange": 1900,
+    "rating": 4.2,
+    "category": "Nails & Grooming",
+    "description": "Polished nails and quick grooming, built for comfort and hygiene."
+  },
+  {
+    "id": 22,
+    "name": "Hauz Khas Balayage House",
+    "area": "Hauz Khas",
+    "services": ["Colour & Balayage", "Haircut", "Blowout"],
+    "priceRange": 5200,
+    "rating": 4.7,
+    "category": "Hair Color Specialist",
+    "description": "Colorists who craft dimension and shine for modern balayage styles."
+  },
+  {
+    "id": 23,
+    "name": "Connaught Place Spa & Shine",
+    "area": "Connaught Place",
+    "services": ["Massage", "Facial", "Makeup"],
+    "priceRange": 4200,
+    "rating": 4.5,
+    "category": "Wellness & Beauty",
+    "description": "Massage and facial combos with event-ready makeup add-ons in CP."
+  },
+  {
+    "id": 24,
+    "name": "GK Event Glam",
+    "area": "Greater Kailash",
+    "services": ["Makeup", "Eyebrows", "Waxing"],
+    "priceRange": 3600,
+    "rating": 4.6,
+    "category": "Event Beauty",
+    "description": "Makeup and grooming expertise for events, auditions, and date nights in GK."
+  },
+  {
+    "id": 25,
+    "name": "Dwarka Hair & Hands",
+    "area": "Dwarka",
+    "services": ["Haircut", "Manicure", "Pedicure"],
+    "priceRange": 2400,
+    "rating": 4.3,
+    "category": "Mixed Services",
+    "description": "One-stop grooming for hair and nails with comfortable, efficient service."
+  },
+  {
+    "id": 26,
+    "name": "Rohini Glow Therapy",
+    "area": "Rohini",
+    "services": ["Facial", "Massage", "Waxing"],
+    "priceRange": 3000,
+    "rating": 4.4,
+    "category": "Glow & Relaxation",
+    "description": "Hydration facials, soothing massages, and confident waxing services."
+  },
+  {
+    "id": 27,
+    "name": "Karol Bagh Precision Cuts",
+    "area": "Karol Bagh",
+    "services": ["Haircut", "Blowout", "Eyebrows"],
+    "priceRange": 2200,
+    "rating": 4.5,
+    "category": "Hair & Brows",
+    "description": "Clean cuts and smooth blowouts finished with neat eyebrow shaping."
+  },
+  {
+    "id": 28,
+    "name": "Rajouri Garden Beauty Atelier",
+    "area": "Rajouri Garden",
+    "services": ["Makeup", "Facial", "Manicure"],
+    "priceRange": 3300,
+    "rating": 4.6,
+    "category": "Beauty Atelier",
+    "description": "Makeup artistry with facial glow and manicure care in Rajouri Garden."
+  },
+  {
+    "id": 29,
+    "name": "South Extension Wellness Corner",
+    "area": "South Extension",
+    "services": ["Massage", "Facial"],
+    "priceRange": 5400,
+    "rating": 4.8,
+    "category": "Wellness",
+    "description": "Therapeutic massage sessions paired with tailored facials in South Extension."
+  },
+  {
+    "id": 30,
+    "name": "Vasant Kunj Color & Care",
+    "area": "Vasant Kunj",
+    "services": ["Colour & Balayage", "Facial", "Blowout"],
+    "priceRange": 4700,
+    "rating": 4.7,
+    "category": "Hair & Skin",
+    "description": "Balayage and facial combos for a complete confidence refresh in VK."
+  },
+  {
+    "id": 31,
+    "name": "Saket Smooth Wax Studio",
+    "area": "Saket",
+    "services": ["Waxing", "Eyebrows", "Facial"],
+    "priceRange": 2100,
+    "rating": 4.4,
+    "category": "Wax & Brows",
+    "description": "Gentle waxing and eyebrow shaping with a soothing facial add-on option."
+  },
+  {
+    "id": 32,
+    "name": "Hauz Khas Spa Belle",
+    "area": "Hauz Khas",
+    "services": ["Massage", "Facial", "Makeup"],
+    "priceRange": 3800,
+    "rating": 4.6,
+    "category": "Spa & Makeup",
+    "description": "Aesthetic spa sessions with makeup finishing for polished evenings."
+  },
+  {
+    "id": 33,
+    "name": "Connaught Place Nail Noir",
+    "area": "Connaught Place",
+    "services": ["Manicure", "Pedicure", "Makeup"],
+    "priceRange": 2600,
+    "rating": 4.5,
+    "category": "Nails & Style",
+    "description": "Modern nail art and optional makeup styling for quick transformations."
+  },
+  {
+    "id": 34,
+    "name": "Greater Kailash Hair Revival",
+    "area": "Greater Kailash",
+    "services": ["Keratin Treatment", "Haircut", "Blowout"],
+    "priceRange": 5600,
+    "rating": 4.8,
+    "category": "Keratin & Hair",
+    "description": "Keratin smoothing and expert blowouts for frizz-free, glossy results."
+  },
+  {
+    "id": 35,
+    "name": "Dwarka Glam Brow Bar",
+    "area": "Dwarka",
+    "services": ["Eyebrows", "Makeup", "Waxing"],
+    "priceRange": 1600,
+    "rating": 4.3,
+    "category": "Brow & Grooming",
+    "description": "Brow shaping and quick waxing for a clean, confident look in Dwarka."
+  },
+  {
+    "id": 36,
+    "name": "Rohini Serenity Nails",
+    "area": "Rohini",
+    "services": ["Manicure", "Pedicure"],
+    "priceRange": 1500,
+    "rating": 4.2,
+    "category": "Nails",
+    "description": "Relaxed nail sessions with friendly staff in Rohini."
+  },
+  {
+    "id": 37,
+    "name": "Karol Bagh Glow & Grind",
+    "area": "Karol Bagh",
+    "services": ["Facial", "Massage", "Waxing"],
+    "priceRange": 3100,
+    "rating": 4.5,
+    "category": "Skin & Massage",
+    "description": "Facials and massages designed to fit your daily rhythm."
+  },
+  {
+    "id": 38,
+    "name": "Rajouri Garden Makeup & Muse",
+    "area": "Rajouri Garden",
+    "services": ["Makeup", "Haircut", "Blowout"],
+    "priceRange": 3600,
+    "rating": 4.6,
+    "category": "Makeup & Hair",
+    "description": "Makeup artistry paired with fresh hair styling in Rajouri Garden."
+  },
+  {
+    "id": 39,
+    "name": "South Extension Radiant Hands",
+    "area": "South Extension",
+    "services": ["Manicure", "Pedicure", "Facial"],
+    "priceRange": 2900,
+    "rating": 4.7,
+    "category": "Beauty Hands",
+    "description": "Nail care with optional facial refresh for an all-in-one day."
+  },
+  {
+    "id": 40,
+    "name": "Vasant Kunj AyurGlow Spa",
+    "area": "Vasant Kunj",
+    "services": ["Massage", "Facial", "Waxing"],
+    "priceRange": 4100,
+    "rating": 4.6,
+    "category": "Ayurvedic Spa",
+    "description": "Wellness-focused facials and massages inspired by traditional rituals."
+  },
+  {
+    "id": 41,
+    "name": "Saket TrendCuts",
+    "area": "Saket",
+    "services": ["Haircut", "Blowout"],
+    "priceRange": 2000,
+    "rating": 4.4,
+    "category": "Hair Styling",
+    "description": "Fresh haircuts and high-gloss blowouts in Saket."
+  },
+  {
+    "id": 42,
+    "name": "Hauz Khas Velvet Color",
+    "area": "Hauz Khas",
+    "services": ["Colour & Balayage", "Eyebrows"],
+    "priceRange": 5000,
+    "rating": 4.7,
+    "category": "Color & Brows",
+    "description": "Balayage with detailed brow finishing for a harmonious look."
+  },
+  {
+    "id": 43,
+    "name": "Connaught Place Calm & Cut",
+    "area": "Connaught Place",
+    "services": ["Haircut", "Facial", "Massage"],
+    "priceRange": 3400,
+    "rating": 4.5,
+    "category": "Hair & Wellness",
+    "description": "A complete refresh: haircut plus hydration facial and calming massage."
+  },
+  {
+    "id": 44,
+    "name": "Greater Kailash SoftSkin Studio",
+    "area": "Greater Kailash",
+    "services": ["Facial", "Eyebrows", "Waxing"],
+    "priceRange": 3800,
+    "rating": 4.6,
+    "category": "Skin & Grooming",
+    "description": "Smoothing skincare sessions with precise eyebrow and waxing services."
+  },
+  {
+    "id": 45,
+    "name": "Dwarka Style & Spa",
+    "area": "Dwarka",
+    "services": ["Massage", "Haircut", "Blowout"],
+    "priceRange": 3200,
+    "rating": 4.3,
+    "category": "Salon & Spa",
+    "description": "Combo sessions with massage and styling for relaxed confidence."
+  },
+  {
+    "id": 46,
+    "name": "Rohini Fresh Face Studio",
+    "area": "Rohini",
+    "services": ["Facial", "Makeup", "Waxing"],
+    "priceRange": 2700,
+    "rating": 4.4,
+    "category": "Face & Makeup",
+    "description": "Hydrating facials plus makeup and quick waxing in a friendly Rohini space."
+  },
+  {
+    "id": 47,
+    "name": "Karol Bagh Nail Atelier",
+    "area": "Karol Bagh",
+    "services": ["Manicure", "Pedicure", "Makeup"],
+    "priceRange": 2400,
+    "rating": 4.5,
+    "category": "Nails & Makeup",
+    "description": "Premium nail treatments and quick makeup add-ons for polished evenings."
+  },
+  {
+    "id": 48,
+    "name": "Rajouri Garden Gloss Works",
+    "area": "Rajouri Garden",
+    "services": ["Blowout", "Haircut", "Makeup"],
+    "priceRange": 2800,
+    "rating": 4.6,
+    "category": "Hair & Makeup",
+    "description": "Bouncy blowouts and clean haircuts, finished with event-ready makeup options."
+  },
+  {
+    "id": 49,
+    "name": "South Extension Lush Locks",
+    "area": "South Extension",
+    "services": ["Haircut", "Colour & Balayage", "Facial"],
+    "priceRange": 6000,
+    "rating": 4.9,
+    "category": "Luxury Hair & Skin",
+    "description": "High-end balayage, tailored facials, and styling excellence in South Extension."
+  },
+  {
+    "id": 50,
+    "name": "Vasant Kunj Radiant Wrap",
+    "area": "Vasant Kunj",
+    "services": ["Massage", "Manicure", "Pedicure"],
+    "priceRange": 3600,
+    "rating": 4.5,
+    "category": "Wellness & Nails",
+    "description": "Wellness massages paired with nail care for a complete self-care day."
+  }
+]
+
