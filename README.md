@@ -1,106 +1,89 @@
 # Slot&Style
 
-### The Ultimate Matchmaker for Beauty Explorers
+AI-Powered Salon Discovery & Smart Beauty Recommendation Platform
 
-Slot&Style is an AI-powered beauty and wellness recommendation platform that helps users discover personalized self-care experiences, receive intelligent salon recommendations, and confidently book appointments.
+Slot&Style is an intelligent beauty and wellness platform that helps users stop guessing and start choosing the right salon experiences confidently.
+
+Instead of manually browsing hundreds of salons, users get personalized, AI-driven recommendations based on their goals, budget, time, and location.
+
+The system acts as a smart beauty concierge that understands user intent and matches them with the most relevant salons and services.
 
 ---
-
 ## Overview
 
-Slot&Style simplifies salon discovery by combining artificial intelligence with personalized recommendations. Instead of manually comparing numerous salons, users complete a consultation process and receive tailored recommendations based on their goals, preferences, budget, available time, and location.
+Problem
 
-The platform acts as a digital beauty concierge that guides users toward suitable salons and self-care experiences.
+Users struggle to find the right salon or beauty service because:
 
----
+Too many choices with no guidance
+No personalization in existing platforms
+Difficulty comparing price, quality, and services
+Time-consuming decision-making
+Lack of trust in unknown salons
 
-## Problem Statement
+Most platforms only support booking—not decision-making.
 
-Finding the right beauty or wellness service can be difficult because users often face:
+💡 Solution
 
-* Too many salon choices.
-* Lack of personalized recommendations.
-* Difficulty comparing prices and services.
-* Uncertainty about quality.
-* Time-consuming decision making.
-* Information overload.
-
-Traditional salon platforms focus on booking appointments. They do not help users determine which services or experiences best match their needs.
-
----
-
-## Solution
-
-Slot&Style provides an AI-powered consultation experience.
+Slot&Style solves this by introducing an AI-based consultation and recommendation system.
 
 Users provide:
 
-* Self-care goals
-* Budget preferences
-* Available time
-* Service preferences
-* Location preferences
+Beauty goals
+Budget range
+Available time
+Preferred services
+Location
 
-The platform then:
+The system then:
 
-* Matches suitable salons.
-* Generates personalized recommendations.
-* Provides AI-powered explanations.
-* Summarizes salon experiences.
-* Guides users toward the best self-care options.
+Analyzes user intent
+Matches relevant salons using weighted scoring
+Enhances results using AI (Gemini)
+Explains why a salon is recommended
 
 ---
 
 ## Key Features
 
-* AI Consultation Wizard
-* Personalized Self-Care Recommendations
-* Smart Salon Matching Engine
-* Google Gemini AI Integration
-* AI Review Summarization
-* Salon Recommendation System
-* Salon Details Page
-* Service Selection
-* Appointment Booking Flow
-* Responsive User Interface
-* Mobile-Friendly Experience
-* Delhi-focused Salon Discovery
+AI-Powered Consultation Wizard
+Smart Salon Recommendation Engine
+Personalized Matching Based on User Preferences
+Google Gemini AI Integration
+AI Review Summarization
+Service-Based Filtering (Hair, Spa, Makeup, etc.)
+Appointment Booking Flow
+Responsive Mobile-First UI
+Location-Based Salon Discovery
 
 ---
 
 ## User Flow
 
-```text
 Landing Page
-        ↓
-Login / Signup
-        ↓
-Consultation Wizard
-        ↓
-Goal
-Budget
-Time
-Location
-Services
-        ↓
-Backend API
-        ↓
-Recommendation Engine
-        ↓
-Top 5 Salon Matches
-        ↓
-Google Gemini AI
-        ↓
-AI Explanation and Review Summary
-        ↓
+   ↓
+Authentication (Login / Signup)
+   ↓
+AI Consultation Wizard
+   ↓
+User Inputs:
+- Goal
+- Budget
+- Time
+- Services
+- Location
+   ↓
+Recommendation Engine (Backend)
+   ↓
+Top Matched Salons (Ranked)
+   ↓
+Gemini AI Explanation + Review Summary
+   ↓
 Salon Details Page
-        ↓
+   ↓
 Service Selection
-        ↓
-Booking Screen
-        ↓
-Appointment Confirmation
-```
+   ↓
+Booking Confirmation
 
 ---
 
@@ -121,24 +104,22 @@ The highest-scoring salons are returned as recommendations.
 
 ## AI Workflow
 
-```text
-User Input
+User Preferences
       ↓
-Express Backend
+Express Backend API
       ↓
-Salon Matching Engine
+Weighted Recommendation Engine
       ↓
 Top Matching Salons
       ↓
-Google Gemini API
+Google Gemini AI
       ↓
-Personalized Suggestions
-Review Summaries
-Recommendations
+AI-Generated Insights:
+- Why this salon matches
+- Review summarization
+- Personalized suggestions
       ↓
-Frontend User Interface
-```
-
+Frontend Display
 ---
 
 ## System Architecture
@@ -365,21 +346,22 @@ Add the project demonstration video link here.
 
 Trailblazers
 
-| Name | Role |
-| ---- | ---- |
-|      |      |
-|      |      |
-|      |      |
-
+| Name     | Role                    |
+| harshita |backend                  | 
+           | and AI integration      |
+| priyansh |frontend                 |
+           |development              |
+|          |                         |
+   
 ---
 
 ## Hackathon Information
 
-| Field     | Details      |
-| --------- | ------------ |
-| Hackathon |              |
-| Theme     |              |
-| Team Name | Trailblazers |
+| Field     | Details                       |
+| --------- | ---------------------         |         
+| Hackathon |  AI Startup Buildathon 2026 – |               Salon Marketplace Challenge  |        
+| Theme     |  Beauty salon                 |
+| Team Name |  Trailblazers                 |
 
 ---
 
