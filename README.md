@@ -347,10 +347,10 @@ Add the project demonstration video link here.
 Trailblazers
 
 | Name     | Role                    |
-| harshita |backend                  | 
-           | and AI integration      |
-| priyansh |frontend                 |
-           |development              |
+| harshita | backend                 | 
+|          | and AI integration      |
+| priyansh | frontend                |
+|          | development             |
 |          |                         |
    
 ---
