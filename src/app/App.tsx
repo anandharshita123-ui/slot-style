@@ -1629,6 +1629,8 @@ function categoryToFilter(category?: SalonCategory): string {
 function ListingScreen({ go }: { go: (s: Screen) => void }) {
   const [activeFilter, setActiveFilter] = useState("All");
   const [saved, setSaved] = useState<number[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
 
   useEffect(() => {
     const raw = window.localStorage.getItem("slotStyle:selectedCategory");
@@ -1650,9 +1652,18 @@ function ListingScreen({ go }: { go: (s: Screen) => void }) {
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
             <Logo onClick={() => go("landing")} />
-            <button className="p-2 rounded-xl bg-[#F8F7FF]">
+
+            <div className="flex items-center gap-2">
               <Search className="w-4 h-4 text-[#7B7A92]" />
-            </button>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search salons"
+                className="w-48 px-3 py-2 rounded-xl bg-[#F8F7FF] border border-transparent focus:border-[#6C63FF]/30 focus:outline-none text-sm text-[#2D2D3F] placeholder:text-[#BBBBC8]"
+                aria-label="Search salons by name"
+              />
+            </div>
           </div>
           <h1 className="text-xl font-bold text-[#2D2D3F] mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>
             Top Matches For You
@@ -1675,12 +1686,22 @@ function ListingScreen({ go }: { go: (s: Screen) => void }) {
         <p className="text-xs text-[#7B7A92] mb-4">{SALONS.length} salons matched · sorted by AI relevance</p>
         <div className="flex flex-col gap-5">
           {SALONS.filter((salon) => {
-            if (activeFilter === "All") return true;
-            if (activeFilter === "Hair") return salon.category.includes("Hair");
-            if (activeFilter === "Skin") return salon.category.includes("Skin");
-            if (activeFilter === "Makeup") return salon.category.includes("Makeup");
-            if (activeFilter === "Spa") return salon.category.includes("Spa");
-            return true;
+            // 1) Category filter (existing behavior)
+            const passesCategory = (() => {
+              if (activeFilter === "All") return true;
+              if (activeFilter === "Hair") return salon.category.includes("Hair");
+              if (activeFilter === "Skin") return salon.category.includes("Skin");
+              if (activeFilter === "Makeup") return salon.category.includes("Makeup");
+              if (activeFilter === "Spa") return salon.category.includes("Spa");
+              return true;
+            })();
+            if (!passesCategory) return false;
+
+            // 2) Name search filter (new behavior)
+            const q = searchQuery.trim().toLowerCase();
+            if (!q) return true;
+
+            return salon.name.trim().toLowerCase().includes(q);
           }).map((salon) => (
             <div key={salon.id} className="bg-white rounded-2xl overflow-hidden border border-[#6C63FF]/08 shadow-sm hover:shadow-md hover:shadow-[#6C63FF]/08 transition-all group">
               <div className="relative h-44 bg-[#EAE6FF]">

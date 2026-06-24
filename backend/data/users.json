@@ -10,5 +10,11 @@
     "email": "harshita@gmail.com",
     "password": "123456",
     "createdAt": "2026-06-20T14:28:06.118Z"
+  },
+  {
+    "name": "dev",
+    "email": "devchawla@gmail.com",
+    "password": "123456",
+    "createdAt": "2026-06-24T12:09:22.413Z"
   }
 ]
