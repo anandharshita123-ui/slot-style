@@ -29,8 +29,15 @@ function readUsers() {
 
 function writeUsers(users) {
   const p = path.join(process.cwd(), "data", "users.json");
-  fs.writeFileSync(p, JSON.stringify(users, null, 2), "utf8");
+  try {
+    fs.writeFileSync(p, JSON.stringify(users, null, 2), "utf8");
+  } catch (err) {
+    // Vercel serverless may run on a read-only filesystem.
+    // Swallow write errors so signup/login doesn't crash.
+    console.error("[auth] Failed to write users.json (continuing in-memory):", err?.message || err);
+  }
 }
+
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
