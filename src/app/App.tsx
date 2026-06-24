@@ -153,7 +153,7 @@ function LoginScreen({ go }: { go: (s: Screen) => void }) {
 
     setIsSigningIn(true);
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -807,7 +807,7 @@ function SignupScreen({ go }: { go: (s: Screen) => void }) {
 
     setIsCreating(true);
     try {
-      const response = await fetch("http://localhost:5000/api/auth/signup", {
+      const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
@@ -1243,7 +1243,7 @@ function WizardScreen({ go }: { go: (s: Screen) => void }) {
                 };
 
                 try {
-                  const response = await fetch("http://localhost:5000/api/recommendation", {
+                  const response = await fetch("/api/recommendation", {
                     method: "POST",
                     headers: {
                       "Content-Type": "application/json",
