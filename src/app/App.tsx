@@ -1382,9 +1382,7 @@ function AIRecScreen({ go }: { go: (s: Screen) => void }) {
 
   // Render-safe recommendations: enforce Delhi-only + budget + duration constraints.
   // If no valid recommendations remain after enforcement, show nothing (avoid static placeholder content).
-  console.log("RAW_RECOMMENDATIONS", recommendations);
-  console.log("COUNT_BEFORE_FILTERS", recommendations.length);
-  console.log("SAMPLE_RECOMMENDATIONS_0_9", recommendations.slice(0, 10));
+
 
   const afterDelhi = (recommendations.length
     ? recommendations.filter((r) => {
@@ -1409,10 +1407,8 @@ function AIRecScreen({ go }: { go: (s: Screen) => void }) {
       })
     : []);
 
-  console.log("AFTER_DELHI_FILTER", afterDelhi.length);
-  console.log("AFTER_BUDGET_FILTER", afterBudget.length);
-  console.log("AFTER_DURATION_FILTER", afterDuration.length);
-  console.log("FILTERS_INPUT", { wizardBudget, wizardTimeMaxHours, summaryLocation: summary?.location, summaryTime: summary?.time });
+
+
 
   const backendFallback = afterDelhi
     .slice(0, 5)
@@ -2018,16 +2014,45 @@ function DetailsScreen({ go }: { go: (s: Screen) => void }) {
 // 7. BOOKING
 // ──────────────────────────────────────────────────────────────────────
 
-const MONTHS = ["June 2025"];
-const CALENDAR_DAYS = [
-  [null, null, null, null, null, null, 1],
-  [2, 3, 4, 5, 6, 7, 8],
-  [9, 10, 11, 12, 13, 14, 15],
-  [16, 17, 18, 19, 20, 21, 22],
-  [23, 24, 25, 26, 27, 28, 29],
-  [30, null, null, null, null, null, null],
-];
 const DAY_LABELS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+
+function getMonthLabel(d: Date) {
+  return d.toLocaleString("default", { month: "long", year: "numeric" });
+}
+
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function addMonths(d: Date, delta: number) {
+  const nd = new Date(d);
+  nd.setMonth(nd.getMonth() + delta);
+  return nd;
+}
+
+function generateCalendarGrid(year: number, monthIndex: number) {
+  // Returns 6 weeks x 7 days, with `null` for leading/trailing blanks.
+  const first = new Date(year, monthIndex, 1);
+  const firstWeekday = first.getDay(); // 0=Sun
+
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+  const grid: Array<Array<number | null>> = [];
+  let current = 1 - firstWeekday;
+
+  for (let w = 0; w < 6; w++) {
+    const row: Array<number | null> = [];
+    for (let i = 0; i < 7; i++) {
+      if (current < 1 || current > daysInMonth) row.push(null);
+      else row.push(current);
+      current++;
+    }
+    grid.push(row);
+  }
+
+  return grid;
+}
+
 
 const TIME_SLOTS = [
   "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
@@ -2041,8 +2066,10 @@ const BOOKING_SERVICES = [
 ];
 
 function BookingScreen({ go }: { go: (s: Screen) => void }) {
-  const [selectedDay, setSelectedDay] = useState<number | null>(18);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>("10:00 AM");
+  const [viewMonth, setViewMonth] = useState<Date>(() => new Date());
+
 
   const [selectedSalon, setSelectedSalon] = useState<any>(null);
   const [selectedServices, setSelectedServices] = useState<Array<{ id: string; name: string; price: number; duration: string; salonId: number }>>([]);
@@ -2101,40 +2128,70 @@ function BookingScreen({ go }: { go: (s: Screen) => void }) {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-[#2D2D3F]">Select Date</h3>
             <div className="flex items-center gap-2">
-              <button className="w-7 h-7 rounded-lg bg-[#F8F7FF] flex items-center justify-center">
+              <button
+                className="w-7 h-7 rounded-lg bg-[#F8F7FF] flex items-center justify-center"
+                onClick={() => setViewMonth((m) => addMonths(m, -1))}
+              >
                 <ChevronLeft className="w-3.5 h-3.5 text-[#7B7A92]" />
               </button>
-              <span className="text-xs font-medium text-[#2D2D3F]">June 2025</span>
-              <button className="w-7 h-7 rounded-lg bg-[#F8F7FF] flex items-center justify-center">
+              <span className="text-xs font-medium text-[#2D2D3F]">{getMonthLabel(viewMonth)}</span>
+              <button
+                className="w-7 h-7 rounded-lg bg-[#F8F7FF] flex items-center justify-center"
+                onClick={() => setViewMonth((m) => addMonths(m, 1))}
+              >
                 <ChevronRight className="w-3.5 h-3.5 text-[#7B7A92]" />
               </button>
             </div>
           </div>
+
           <div className="grid grid-cols-7 gap-1 mb-2">
             {DAY_LABELS.map((d) => (
               <div key={d} className="text-center text-[10px] font-medium text-[#7B7A92] py-1">{d}</div>
             ))}
           </div>
-          {CALENDAR_DAYS.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 gap-1">
-              {week.map((day, di) => (
-                <button
-                  key={di}
-                  disabled={!day || day < 18}
-                  onClick={() => day && setSelectedDay(day)}
-                  className={`aspect-square rounded-xl text-xs font-medium transition-all ${
-                    !day ? "invisible" :
-                    day < 18 ? "text-[#BBBBC8] cursor-not-allowed" :
-                    selectedDay === day ? "text-white" :
-                    "text-[#2D2D3F] hover:bg-[#EAE6FF]"
-                  }`}
-                  style={selectedDay === day ? { background: `linear-gradient(135deg, ${PURPLE}, #9B94FF)` } : {}}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
-          ))}
+
+          {(() => {
+            const today = startOfDay(new Date());
+            const grid = generateCalendarGrid(viewMonth.getFullYear(), viewMonth.getMonth());
+
+            return grid.map((week, wi) => (
+              <div key={wi} className="grid grid-cols-7 gap-1">
+                {week.map((day, di) => {
+                  if (!day) {
+                    return (
+                      <button
+                        key={di}
+                        disabled
+                        className="aspect-square rounded-xl text-xs font-medium invisible"
+                      />
+                    );
+                  }
+
+                  const cellDate = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
+                  const isPast = startOfDay(cellDate).getTime() < today.getTime();
+                  const isSelected = selectedDay === day;
+
+                  return (
+                    <button
+                      key={di}
+                      disabled={isPast}
+                      onClick={() => setSelectedDay(day)}
+                      className={`aspect-square rounded-xl text-xs font-medium transition-all ${
+                        isPast
+                          ? "text-[#BBBBC8] cursor-not-allowed"
+                          : isSelected
+                            ? "text-white"
+                            : "text-[#2D2D3F] hover:bg-[#EAE6FF]"
+                      }`}
+                      style={isSelected ? { background: `linear-gradient(135deg, ${PURPLE}, #9B94FF)` } : {}}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            ));
+          })()}
         </div>
 
         {/* Time slots */}
@@ -2195,12 +2252,15 @@ function BookingScreen({ go }: { go: (s: Screen) => void }) {
           fullWidth
           onClick={() => {
             try {
+              const monthLabel = getMonthLabel(viewMonth);
+              const year = viewMonth.getFullYear();
+
               window.localStorage.setItem(
                 "slotStyle:bookingDetails",
                 JSON.stringify({
                   salon: selectedSalon || null,
                   selectedServices: selectedServices || [],
-                  date: selectedDay ? `June ${selectedDay}, 2025` : null,
+                  date: selectedDay ? `${monthLabel} ${selectedDay}, ${year}` : null,
                   slot: selectedSlot,
                   total,
                 })
@@ -2230,6 +2290,8 @@ function RescheduleScreen({ go }: { go: (s: Screen) => void }) {
   const [bookingDetails, setBookingDetails] = useState<any>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [viewMonth, setViewMonth] = useState<Date>(() => new Date());
+
 
   useEffect(() => {
     try {
@@ -2293,11 +2355,17 @@ function RescheduleScreen({ go }: { go: (s: Screen) => void }) {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-[#2D2D3F]">Select New Date</h3>
             <div className="flex items-center gap-2">
-              <button className="w-7 h-7 rounded-lg bg-[#F8F7FF] flex items-center justify-center">
+              <button
+                className="w-7 h-7 rounded-lg bg-[#F8F7FF] flex items-center justify-center"
+                onClick={() => setViewMonth((m) => addMonths(m, -1))}
+              >
                 <ChevronLeft className="w-3.5 h-3.5 text-[#7B7A92]" />
               </button>
-              <span className="text-xs font-medium text-[#2D2D3F]">June 2025</span>
-              <button className="w-7 h-7 rounded-lg bg-[#F8F7FF] flex items-center justify-center">
+              <span className="text-xs font-medium text-[#2D2D3F]">{getMonthLabel(viewMonth)}</span>
+              <button
+                className="w-7 h-7 rounded-lg bg-[#F8F7FF] flex items-center justify-center"
+                onClick={() => setViewMonth((m) => addMonths(m, 1))}
+              >
                 <ChevronRight className="w-3.5 h-3.5 text-[#7B7A92]" />
               </button>
             </div>
@@ -2307,26 +2375,48 @@ function RescheduleScreen({ go }: { go: (s: Screen) => void }) {
               <div key={d} className="text-center text-[10px] font-medium text-[#7B7A92] py-1">{d}</div>
             ))}
           </div>
-          {CALENDAR_DAYS.map((week, wi) => (
-            <div key={wi} className="grid grid-cols-7 gap-1">
-              {week.map((day, di) => (
-                <button
-                  key={di}
-                  disabled={!day || day < 18}
-                  onClick={() => day && setSelectedDay(day)}
-                  className={`aspect-square rounded-xl text-xs font-medium transition-all ${
-                    !day ? "invisible" :
-                    day < 18 ? "text-[#BBBBC8] cursor-not-allowed" :
-                    selectedDay === day ? "text-white" :
-                    "text-[#2D2D3F] hover:bg-[#EAE6FF]"
-                  }`}
-                  style={selectedDay === day ? { background: `linear-gradient(135deg, ${PURPLE}, #9B94FF)` } : {}}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
-          ))}
+          {(() => {
+            const today = startOfDay(new Date());
+            const grid = generateCalendarGrid(viewMonth.getFullYear(), viewMonth.getMonth());
+
+            return grid.map((week, wi) => (
+              <div key={wi} className="grid grid-cols-7 gap-1">
+                {week.map((day, di) => {
+                  if (!day) {
+                    return (
+                      <button
+                        key={di}
+                        disabled
+                        className="aspect-square rounded-xl text-xs font-medium invisible"
+                      />
+                    );
+                  }
+
+                  const cellDate = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day);
+                  const isPast = startOfDay(cellDate).getTime() < today.getTime();
+                  const isSelected = selectedDay === day;
+
+                  return (
+                    <button
+                      key={di}
+                      disabled={isPast}
+                      onClick={() => setSelectedDay(day)}
+                      className={`aspect-square rounded-xl text-xs font-medium transition-all ${
+                        isPast
+                          ? "text-[#BBBBC8] cursor-not-allowed"
+                          : isSelected
+                            ? "text-white"
+                            : "text-[#2D2D3F] hover:bg-[#EAE6FF]"
+                      }`}
+                      style={isSelected ? { background: `linear-gradient(135deg, ${PURPLE}, #9B94FF)` } : {}}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+            ));
+          })()}
         </div>
 
         {/* Time slots */}
