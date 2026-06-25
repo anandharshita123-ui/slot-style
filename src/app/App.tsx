@@ -1,10 +1,11 @@
-  import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Sparkles, Star, MapPin, Clock, ChevronRight, ChevronLeft,
   Check, Calendar, Search, ArrowRight, Heart, Shield, Zap,
   Phone, Mail, Instagram, Twitter, Scissors, Droplets,
   Sun, Smile, X, Menu, User
 } from "lucide-react";
+import { apiUrl } from "@/lib/api";
 
 type Screen =
   | "login"
@@ -153,7 +154,7 @@ function LoginScreen({ go }: { go: (s: Screen) => void }) {
 
     setIsSigningIn(true);
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(apiUrl("/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -807,7 +808,7 @@ function SignupScreen({ go }: { go: (s: Screen) => void }) {
 
     setIsCreating(true);
     try {
-      const response = await fetch("/api/auth/signup", {
+      const response = await fetch(apiUrl("/auth/signup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
@@ -1243,7 +1244,7 @@ function WizardScreen({ go }: { go: (s: Screen) => void }) {
                 };
 
                 try {
-                  const response = await fetch("/api/recommendation", {
+                  const response = await fetch(apiUrl("/recommendation"), {
                     method: "POST",
                     headers: {
                       "Content-Type": "application/json",
