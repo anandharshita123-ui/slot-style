@@ -4,37 +4,52 @@ import express from "express";
 import cors from "cors";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const app = express();
+const backendDir = path.dirname(fileURLToPath(import.meta.url));
+const dataDir = path.join(backendDir, "data");
 
 app.use(cors());
 app.use(express.json());
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid JSON payload.",
+    });
+  }
+
+  return next(err);
+});
 
 // ──────────────────────────────────────────────────────────────────────
 // Simple email/password auth (no Firebase)
 // ──────────────────────────────────────────────────────────────────────
 function readUsers() {
   try {
-    const p = path.join(process.cwd(), "data", "users.json");
+    const p = path.join(dataDir, "users.json");
     if (!fs.existsSync(p)) return [];
     const raw = fs.readFileSync(p, "utf8");
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
+  } catch (error) {
+    console.error("[auth] Failed to read users.json:", error);
     return [];
   }
 }
 
 function writeUsers(users) {
-  const p = path.join(process.cwd(), "data", "users.json");
+  const p = path.join(dataDir, "users.json");
   try {
+    fs.mkdirSync(dataDir, { recursive: true });
     fs.writeFileSync(p, JSON.stringify(users, null, 2), "utf8");
   } catch (err) {
     // Vercel serverless may run on a read-only filesystem.
     // Swallow write errors so signup/login doesn't crash.
-    console.error("[auth] Failed to write users.json (continuing in-memory):", err?.message || err);
+    console.error("[auth] Failed to write users.json (continuing in-memory):", err);
   }
 }
 
@@ -121,7 +136,7 @@ function scoreSalon({ salon, services, budget, location }) {
   return score;
 }
 
-const salonsPath = path.join(process.cwd(), "data", "salons.json");
+const salonsPath = path.join(dataDir, "salons.json");
 const salons = JSON.parse(fs.readFileSync(salonsPath, "utf8"));
 
 app.get("/api/test-gemini", async (req, res) => {
@@ -170,24 +185,32 @@ app.post("/api/auth/login", (req, res) => {
 });
 
 app.post("/api/auth/signup", (req, res) => {
-  const { name, email, password } = req.body || {};
-  const e = normalizeEmail(email);
-  const p = String(password || "");
-  const n = String(name || "").trim();
+  try {
+    const { name, email, password } = req.body || {};
+    const e = normalizeEmail(email);
+    const p = String(password || "");
+    const n = String(name || "").trim();
 
-  if (!n) return res.status(400).json({ success: false, message: "Unable to create account." });
-  if (!validateEmail(e)) return res.status(400).json({ success: false, message: "Please enter a valid email address." });
-  if (!validatePassword(p)) return res.status(400).json({ success: false, message: "Password must be at least 6 characters." });
+    if (!n) return res.status(400).json({ success: false, message: "Unable to create account." });
+    if (!validateEmail(e)) return res.status(400).json({ success: false, message: "Please enter a valid email address." });
+    if (!validatePassword(p)) return res.status(400).json({ success: false, message: "Password must be at least 6 characters." });
 
-  const users = readUsers();
-  if (users.some((u) => u.email === e)) {
-    return res.status(409).json({ success: false, message: "Account already exists. Please sign in." });
+    const users = readUsers();
+    if (users.some((u) => u.email === e)) {
+      return res.status(409).json({ success: false, message: "Account already exists. Please sign in." });
+    }
+
+    users.push({ name: n, email: e, password: p, createdAt: new Date().toISOString() });
+    writeUsers(users);
+
+    return res.status(201).json({ success: true, message: "Account created." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
   }
-
-  users.push({ name: n, email: e, password: p, createdAt: new Date().toISOString() });
-  writeUsers(users);
-
-  return res.json({ success: true, message: "Account created." });
 });
 
 app.post("/api/recommendation", async (req, res) => {
