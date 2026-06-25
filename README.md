@@ -304,43 +304,15 @@ The application is optimized for:
 
 ---
 
-## Screenshots
-
-Add project screenshots here.
-
-### Landing Page
-
-Insert screenshot.
-
-### Consultation Wizard
-
-Insert screenshot.
-
-### AI Recommendations
-
-Insert screenshot.
-
-### Salon Details
-
-Insert screenshot.
-
-### Booking Screen
-
-Insert screenshot.
-
----
-
 ## Architecture Diagram
 
-Insert the system architecture diagram here.
+
+
+![Slot&Style System Architecture]
+(slot-style_arch.png)
 
 ---
 
-## Demo Video
-
-Add the project demonstration video link here.
-
----
 
 ## Team Information
 
