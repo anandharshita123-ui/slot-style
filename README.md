@@ -9,6 +9,8 @@ Instead of manually browsing hundreds of salons, users get personalized, AI-driv
 The system acts as a smart beauty concierge that understands user intent and matches them with the most relevant salons and services.
 
 ---
+
+🌐 Live Application:https://slot-style.vercel.app/
 ## Overview
 
 Problem
@@ -348,20 +350,20 @@ Trailblazers
 
 | Name     | Role                    |
 | harshita | backend                 | 
-|          | and AI integration      |
+|            and AI integration      |
 | priyansh | frontend                |
-|          | development             |
+|            development             |
 |          |                         |
    
 ---
 
 ## Hackathon Information
 
-| Field     | Details                       |
-| --------- | ---------------------         |         
-| Hackathon |  AI Startup Buildathon 2026 – |               Salon Marketplace Challenge  |        
-| Theme     |  Beauty salon                 |
-| Team Name |  Trailblazers                 |
+| Field     | Details                                                    |
+| --------- | ---------------------                                      |         
+| Hackathon |  AI Startup Buildathon 2026 – Salon Marketplace Challenge  |        
+| Theme     |  Beauty salon                                              |
+| Team Name |  Trailblazers                                              |
 
 ---
 
