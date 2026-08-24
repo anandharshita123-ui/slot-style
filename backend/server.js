@@ -39,20 +39,32 @@ import mongoose from "mongoose";
 const DEFAULT_URI = "mongodb+srv://admin:slotandstyleadmin@cluster0.0drvk0y.mongodb.net/slotstyle?retryWrites=true&w=majority";
 const MONGODB_URI = (process.env.MONGODB_URI || DEFAULT_URI).trim();
 
+let cachedPromise = null;
+
 async function ensureDbConnected() {
   if (!MONGODB_URI) return false;
   if (mongoose.connection.readyState === 1) return true;
-  try {
-    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
-    console.log("[MongoDB] Connected successfully to Cloud Database");
-    return true;
-  } catch (err) {
-    console.error("[MongoDB] Connection error:", err.message);
-    return false;
+
+  if (!cachedPromise) {
+    cachedPromise = mongoose
+      .connect(MONGODB_URI, {
+        bufferCommands: false,
+        serverSelectionTimeoutMS: 5000,
+      })
+      .then(() => {
+        console.log("[MongoDB] Connected successfully to Cloud Database");
+        return true;
+      })
+      .catch((err) => {
+        cachedPromise = null;
+        console.error("[MongoDB] Connection error:", err.message);
+        return false;
+      });
   }
+
+  return await cachedPromise;
 }
 
-// Initial attempt at module startup
 ensureDbConnected();
 
 const userSchema = new mongoose.Schema(
