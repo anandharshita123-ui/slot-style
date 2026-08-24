@@ -163,6 +163,7 @@ function LoginScreen({ go }: { go: (s: Screen) => void }) {
 
       const data = await response.json().catch(() => ({}));
       if (response.ok && data?.success) {
+        try { window.localStorage.setItem("slotStyle:userEmail", normEmail); } catch {}
         go("wizard");
         return;
       }
@@ -172,6 +173,7 @@ function LoginScreen({ go }: { go: (s: Screen) => void }) {
         const localUsers = JSON.parse(window.localStorage.getItem("slotStyle:users") || "[]");
         const found = Array.isArray(localUsers) && localUsers.find((u: any) => u.email === normEmail && u.password === password);
         if (found) {
+          try { window.localStorage.setItem("slotStyle:userEmail", normEmail); } catch {}
           go("wizard");
           return;
         }
@@ -2315,21 +2317,32 @@ function BookingScreen({ go }: { go: (s: Screen) => void }) {
 
         <PrimaryButton
           fullWidth
-          onClick={() => {
+          onClick={async () => {
             try {
               const monthLabel = getMonthLabel(viewMonth);
               const year = viewMonth.getFullYear();
+              const dateStr = selectedDay ? `${monthLabel} ${selectedDay}, ${year}` : null;
+              const ref = `SS-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+              const userEmail = window.localStorage.getItem("slotStyle:userEmail") || "guest@slotstyle.com";
 
-              window.localStorage.setItem(
-                "slotStyle:bookingDetails",
-                JSON.stringify({
-                  salon: selectedSalon || null,
-                  selectedServices: selectedServices || [],
-                  date: selectedDay ? `${monthLabel} ${selectedDay}, ${year}` : null,
-                  slot: selectedSlot,
-                  total,
-                })
-              );
+              const payload = {
+                bookingReference: ref,
+                userEmail,
+                salon: selectedSalon ? { name: selectedSalon.name, area: selectedSalon.area, rating: selectedSalon.rating } : null,
+                selectedServices: selectedServices || [],
+                date: dateStr,
+                slot: selectedSlot,
+                totalAmount: total,
+              };
+
+              window.localStorage.setItem("slotStyle:bookingDetails", JSON.stringify(payload));
+
+              // Save booking entry directly to MongoDB Atlas
+              fetch(apiUrl("/bookings"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              }).catch(() => {});
             } catch {
               // ignore
             }

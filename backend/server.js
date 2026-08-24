@@ -7,10 +7,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import dns from "dns";
 
-try {
-  dns.setServers(["8.8.8.8", "1.1.1.1"]);
-} catch {
-  // ignore
+if (process.platform === "win32" && !process.env.VERCEL) {
+  try {
+    dns.setServers(["8.8.8.8", "1.1.1.1"]);
+  } catch {
+    // ignore
+  }
 }
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -37,20 +39,23 @@ import mongoose from "mongoose";
 // ──────────────────────────────────────────────────────────────────────
 // MongoDB Atlas Connection & Models
 // ──────────────────────────────────────────────────────────────────────
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI?.trim();
 
-if (MONGODB_URI) {
-  mongoose
-    .connect(MONGODB_URI)
-    .then(() => {
-      console.log("[MongoDB] Connected successfully to Cloud Database");
-    })
-    .catch((err) => {
-      console.error("[MongoDB] Connection error:", err.message);
-    });
-} else {
-  console.log("[MongoDB] MONGODB_URI not set. Using file/memory fallback.");
+async function ensureDbConnected() {
+  if (!MONGODB_URI) return false;
+  if (mongoose.connection.readyState === 1) return true;
+  try {
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
+    console.log("[MongoDB] Connected successfully to Cloud Database");
+    return true;
+  } catch (err) {
+    console.error("[MongoDB] Connection error:", err.message);
+    return false;
+  }
 }
+
+// Initial attempt at module startup
+ensureDbConnected();
 
 const userSchema = new mongoose.Schema(
   {
@@ -62,6 +67,46 @@ const userSchema = new mongoose.Schema(
 );
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
+
+const preferenceSchema = new mongoose.Schema(
+  {
+    userEmail: { type: String },
+    goal: String,
+    budget: String,
+    time: String,
+    services: [String],
+    location: String,
+  },
+  { timestamps: true }
+);
+
+const Preference = mongoose.models.Preference || mongoose.model("Preference", preferenceSchema);
+
+const bookingSchema = new mongoose.Schema(
+  {
+    bookingReference: { type: String },
+    userEmail: { type: String },
+    salon: {
+      name: String,
+      area: String,
+      rating: Number,
+    },
+    selectedServices: [
+      {
+        name: String,
+        price: Number,
+        duration: String,
+      },
+    ],
+    date: String,
+    slot: String,
+    totalAmount: Number,
+    status: { type: String, default: "confirmed" },
+  },
+  { timestamps: true }
+);
+
+const Booking = mongoose.models.Booking || mongoose.model("Booking", bookingSchema);
 
 // ──────────────────────────────────────────────────────────────────────
 // Simple email/password auth (MongoDB + File Fallback)
@@ -211,7 +256,9 @@ app.post("/api/auth/login", async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid email or password." });
     }
 
-    if (mongoose.connection.readyState === 1) {
+    const isDbReady = await ensureDbConnected();
+
+    if (isDbReady) {
       const found = await User.findOne({ email: e });
       if (!found || found.password !== p) {
         return res.status(401).json({ success: false, message: "Invalid email or password." });
@@ -244,7 +291,9 @@ app.post("/api/auth/signup", async (req, res) => {
     if (!validateEmail(e)) return res.status(400).json({ success: false, message: "Please enter a valid email address." });
     if (!validatePassword(p)) return res.status(400).json({ success: false, message: "Password must be at least 6 characters." });
 
-    if (mongoose.connection.readyState === 1) {
+    const isDbReady = await ensureDbConnected();
+
+    if (isDbReady) {
       const existing = await User.findOne({ email: e });
       if (existing) {
         return res.status(409).json({ success: false, message: "Account already exists. Please sign in." });
@@ -309,7 +358,6 @@ app.post("/api/recommendation", async (req, res) => {
       if (selectedServices.includes(s)) hits += 1;
     }
 
-    // If user chose services that align with goal, boost. (Simple & readable)
     return Math.round((hits / target.length) * 20);
   }
 
@@ -317,19 +365,13 @@ app.post("/api/recommendation", async (req, res) => {
     const t = String(time || "").trim();
     if (!t) return 0;
 
-    // Convert user's label into a weight bucket.
     const tWeight = timeMap[t];
     if (!tWeight) return 0;
 
-    // Estimate salon duration from their service count (lightweight hackathon approach).
-    // More services => longer time.
     const salonEstimatedDurationHours = Math.max(1, Math.round((Array.isArray(salon.services) ? salon.services.length : 1) * 1));
 
-    // Prefer salons where estimated duration isn't drastically longer than available.
-    // Use tWeight as rough hours tier: 1->1h, 2->2h, 4->3h+, 6->6h-ish.
     const availableTierHours = tWeight <= 2 ? tWeight : tWeight <= 4 ? 3 : 6;
     const diff = Math.abs(availableTierHours - salonEstimatedDurationHours);
-    const maxDiff = availableTierHours;
 
     const raw = diff <= Math.max(1, availableTierHours * 0.5) ? 10 : 0;
     return raw;
@@ -398,11 +440,52 @@ No marketing fluff.`;
     console.error("[Gemini] Failed to generate aiSummary:", err);
   }
 
+  if (mongoose.connection.readyState === 1) {
+    try {
+      await Preference.create({
+        userEmail: req.body?.userEmail || "anonymous",
+        goal: String(goal || ""),
+        budget: String(budget || ""),
+        time: String(time || ""),
+        services: Array.isArray(services) ? services : [],
+        location: String(location || ""),
+      });
+      console.log("[MongoDB] Card selection saved to preferences collection!");
+    } catch (prefErr) {
+      console.error("[MongoDB] Failed to save preference:", prefErr.message);
+    }
+  }
+
   res.json({
     success: true,
     recommendations,
     aiSummary,
   });
+});
+
+app.post("/api/bookings", async (req, res) => {
+  try {
+    const { bookingReference, userEmail, salon, selectedServices, date, slot, totalAmount } = req.body || {};
+
+    if (mongoose.connection.readyState === 1) {
+      const newBooking = await Booking.create({
+        bookingReference: bookingReference || `SS-${Date.now()}`,
+        userEmail: userEmail || "guest@slotstyle.com",
+        salon,
+        selectedServices,
+        date,
+        slot,
+        totalAmount,
+      });
+      console.log("[MongoDB] Booking saved to bookings collection!");
+      return res.status(201).json({ success: true, booking: newBooking });
+    }
+
+    return res.json({ success: true, message: "Booking recorded." });
+  } catch (err) {
+    console.error("[MongoDB] Booking error:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 app.listen(5000, () => {
