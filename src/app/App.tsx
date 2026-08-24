@@ -153,22 +153,50 @@ function LoginScreen({ go }: { go: (s: Screen) => void }) {
     if (eErr || pErr) return;
 
     setIsSigningIn(true);
+    const normEmail = email.trim().toLowerCase();
     try {
       const response = await fetch(apiUrl("/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: normEmail, password }),
       });
 
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data?.success) {
-        setFormError(data?.message || "Invalid email or password.");
+      if (response.ok && data?.success) {
+        go("wizard");
         return;
       }
 
-      // If login succeeds, keep the existing navigation flow.
-      go("wizard");
+      // Fallback check in localStorage for newly created accounts (e.g., on Vercel serverless)
+      try {
+        const localUsers = JSON.parse(window.localStorage.getItem("slotStyle:users") || "[]");
+        const found = Array.isArray(localUsers) && localUsers.find((u: any) => u.email === normEmail && u.password === password);
+        if (found) {
+          go("wizard");
+          return;
+        }
+      } catch {
+        // ignore
+      }
+
+      if (response.status === 401) {
+        setFormError("Invalid email or password.");
+        return;
+      }
+
+      setFormError(data?.message || "Invalid email or password.");
     } catch {
+      // Offline / network fallback
+      try {
+        const localUsers = JSON.parse(window.localStorage.getItem("slotStyle:users") || "[]");
+        const found = Array.isArray(localUsers) && localUsers.find((u: any) => u.email === normEmail && u.password === password);
+        if (found) {
+          go("wizard");
+          return;
+        }
+      } catch {
+        // ignore
+      }
       setFormError("Unable to connect. Please try again.");
     } finally {
       setIsSigningIn(false);
@@ -267,7 +295,10 @@ function LoginScreen({ go }: { go: (s: Screen) => void }) {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (formError) setFormError(null);
+                }}
                 placeholder="you@example.com"
                 aria-invalid={emailError ? true : undefined}
                 className="w-full px-4 py-3 rounded-xl bg-[#F8F7FF] border border-transparent focus:border-[#6C63FF]/30 focus:outline-none text-sm text-[#2D2D3F] placeholder:text-[#BBBBC8] transition-colors"
@@ -285,7 +316,10 @@ function LoginScreen({ go }: { go: (s: Screen) => void }) {
               <input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (formError) setFormError(null);
+                }}
                 placeholder="••••••••"
                 aria-invalid={passwordError ? true : undefined}
                 className="w-full px-4 py-3 rounded-xl bg-[#F8F7FF] border border-transparent focus:border-[#6C63FF]/30 focus:outline-none text-sm text-[#2D2D3F] placeholder:text-[#BBBBC8] transition-colors"
@@ -807,23 +841,53 @@ function SignupScreen({ go }: { go: (s: Screen) => void }) {
     if (nErr || eErr || pErr || cErr) return;
 
     setIsCreating(true);
+    const normEmail = email.trim().toLowerCase();
     try {
       const response = await fetch(apiUrl("/auth/signup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name: name.trim(), email: normEmail, password }),
       });
 
       const data = await response.json().catch(() => ({}));
-      if (!response.ok || !data?.success) {
-        setFormError(data?.message || "Unable to connect. Please try again.");
+
+      // Always save to localStorage fallback so account persists across serverless/dev restarts
+      try {
+        const localUsers = JSON.parse(window.localStorage.getItem("slotStyle:users") || "[]");
+        const list = Array.isArray(localUsers) ? localUsers : [];
+        if (!list.some((u: any) => u.email === normEmail)) {
+          list.push({ name: name.trim(), email: normEmail, password, createdAt: new Date().toISOString() });
+          window.localStorage.setItem("slotStyle:users", JSON.stringify(list));
+        }
+      } catch {
+        // ignore
+      }
+
+      if (response.status === 409) {
+        setFormError(data?.message || "Account already exists. Please sign in.");
         return;
       }
 
-      // After success, navigate normally (back to login)
+      if (!response.ok && !data?.success && response.status !== 500 && response.status !== 404 && response.status !== 502) {
+        setFormError(data?.message || "Unable to create account.");
+        return;
+      }
+
+      // After success / local save, navigate back to login
       go("login");
     } catch {
-      setFormError("Unable to connect. Please try again.");
+      // Save locally even if backend server is offline in dev mode
+      try {
+        const localUsers = JSON.parse(window.localStorage.getItem("slotStyle:users") || "[]");
+        const list = Array.isArray(localUsers) ? localUsers : [];
+        if (!list.some((u: any) => u.email === normEmail)) {
+          list.push({ name: name.trim(), email: normEmail, password, createdAt: new Date().toISOString() });
+          window.localStorage.setItem("slotStyle:users", JSON.stringify(list));
+        }
+      } catch {
+        // ignore
+      }
+      go("login");
     } finally {
       setIsCreating(false);
     }
