@@ -36,8 +36,7 @@ app.use((err, req, res, next) => {
 
 import mongoose from "mongoose";
 
-const DEFAULT_URI = "mongodb+srv://admin:slotandstyleadmin@cluster0.0drvk0y.mongodb.net/slotstyle?retryWrites=true&w=majority";
-const MONGODB_URI = (process.env.MONGODB_URI || DEFAULT_URI).trim();
+const MONGODB_URI = process.env.MONGODB_URI?.trim() || "";
 
 let cachedPromise = null;
 

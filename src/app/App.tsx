@@ -45,29 +45,6 @@ function Logo({ onClick }: { onClick?: () => void }) {
       </span>
     </button>
   );
-function UserBadge() {
-  const [userEmail, setUserEmail] = useState("");
-  const [userName, setUserName] = useState("");
-
-  useEffect(() => {
-    try {
-      setUserEmail(window.localStorage.getItem("slotStyle:userEmail") || "");
-      setUserName(window.localStorage.getItem("slotStyle:userName") || "");
-    } catch {}
-  }, []);
-
-  if (!userEmail && !userName) return null;
-
-  const display = userName || userEmail.split("@")[0] || "User";
-
-  return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F8F7FF] border border-[#6C63FF]/20 text-xs font-medium text-[#2D2D3F]">
-      <div className="w-5 h-5 rounded-full bg-[#6C63FF] text-white flex items-center justify-center text-[10px] font-bold">
-        {display.charAt(0).toUpperCase()}
-      </div>
-      <span className="truncate max-w-[120px] font-semibold">{display}</span>
-    </div>
-  );
 }
 
 function PrimaryButton({
@@ -878,8 +855,6 @@ function SignupScreen({ go }: { go: (s: Screen) => void }) {
 
       // Always save to localStorage fallback so account persists across serverless/dev restarts
       try {
-        window.localStorage.setItem("slotStyle:userEmail", normEmail);
-        window.localStorage.setItem("slotStyle:userName", name.trim());
         const localUsers = JSON.parse(window.localStorage.getItem("slotStyle:users") || "[]");
         const list = Array.isArray(localUsers) ? localUsers : [];
         if (!list.some((u: any) => u.email === normEmail)) {
@@ -1096,10 +1071,7 @@ function WizardScreen({ go }: { go: (s: Screen) => void }) {
         <div className="max-w-2xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <Logo onClick={() => go("landing")} />
-            <div className="flex items-center gap-3">
-              <UserBadge />
-              <span className="text-xs text-[#7B7A92]">Step {step + 1} of {totalSteps}</span>
-            </div>
+            <span className="text-xs text-[#7B7A92]">Step {step + 1} of {totalSteps}</span>
           </div>
           {/* Progress bar */}
           <div className="h-1.5 bg-[#EAE6FF] rounded-full overflow-hidden">
