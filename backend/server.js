@@ -50,6 +50,8 @@ async function ensureDbConnected() {
       .connect(MONGODB_URI, {
         bufferCommands: false,
         serverSelectionTimeoutMS: 5000,
+        tls: true,
+        tlsAllowInvalidCertificates: true,
       })
       .then(() => {
         console.log("[MongoDB] Connected successfully to Cloud Database");
