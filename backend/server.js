@@ -5,6 +5,13 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import dns from "dns";
+
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1"]);
+} catch {
+  // ignore
+}
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -25,8 +32,39 @@ app.use((err, req, res, next) => {
   return next(err);
 });
 
+import mongoose from "mongoose";
+
 // ──────────────────────────────────────────────────────────────────────
-// Simple email/password auth (no Firebase)
+// MongoDB Atlas Connection & Models
+// ──────────────────────────────────────────────────────────────────────
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (MONGODB_URI) {
+  mongoose
+    .connect(MONGODB_URI)
+    .then(() => {
+      console.log("[MongoDB] Connected successfully to Cloud Database");
+    })
+    .catch((err) => {
+      console.error("[MongoDB] Connection error:", err.message);
+    });
+} else {
+  console.log("[MongoDB] MONGODB_URI not set. Using file/memory fallback.");
+}
+
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+  },
+  { timestamps: true }
+);
+
+const User = mongoose.models.User || mongoose.model("User", userSchema);
+
+// ──────────────────────────────────────────────────────────────────────
+// Simple email/password auth (MongoDB + File Fallback)
 // ──────────────────────────────────────────────────────────────────────
 function readUsers() {
   try {
@@ -163,28 +201,39 @@ app.get("/api/test-gemini", async (req, res) => {
   }
 });
 
-app.post("/api/auth/login", (req, res) => {
-  const { email, password } = req.body || {};
-  const e = normalizeEmail(email);
-  const p = String(password || "");
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    const e = normalizeEmail(email);
+    const p = String(password || "");
 
-  if (!validateEmail(e)) {
-    return res.status(400).json({ success: false, message: "Invalid email or password." });
-  }
-  if (!validatePassword(p)) {
-    return res.status(400).json({ success: false, message: "Invalid email or password." });
-  }
+    if (!validateEmail(e) || !validatePassword(p)) {
+      return res.status(400).json({ success: false, message: "Invalid email or password." });
+    }
 
-  const users = readUsers();
-  const found = users.find((u) => u.email === e);
-  if (!found || found.password !== p) {
-    return res.status(401).json({ success: false, message: "Invalid email or password." });
-  }
+    if (mongoose.connection.readyState === 1) {
+      const found = await User.findOne({ email: e });
+      if (!found || found.password !== p) {
+        return res.status(401).json({ success: false, message: "Invalid email or password." });
+      }
+      return res.json({ success: true, message: "Signed in." });
+    }
 
-  return res.json({ success: true, message: "Signed in." });
+    // Fallback to local file / memory
+    const users = readUsers();
+    const found = users.find((u) => u.email === e);
+    if (!found || found.password !== p) {
+      return res.status(401).json({ success: false, message: "Invalid email or password." });
+    }
+
+    return res.json({ success: true, message: "Signed in." });
+  } catch (err) {
+    console.error("[auth login error]:", err);
+    return res.status(500).json({ success: false, message: "Server error during login." });
+  }
 });
 
-app.post("/api/auth/signup", (req, res) => {
+app.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body || {};
     const e = normalizeEmail(email);
@@ -195,6 +244,17 @@ app.post("/api/auth/signup", (req, res) => {
     if (!validateEmail(e)) return res.status(400).json({ success: false, message: "Please enter a valid email address." });
     if (!validatePassword(p)) return res.status(400).json({ success: false, message: "Password must be at least 6 characters." });
 
+    if (mongoose.connection.readyState === 1) {
+      const existing = await User.findOne({ email: e });
+      if (existing) {
+        return res.status(409).json({ success: false, message: "Account already exists. Please sign in." });
+      }
+
+      await User.create({ name: n, email: e, password: p });
+      return res.status(201).json({ success: true, message: "Account created." });
+    }
+
+    // Fallback to local file / memory
     const users = readUsers();
     if (users.some((u) => u.email === e)) {
       return res.status(409).json({ success: false, message: "Account already exists. Please sign in." });
@@ -205,7 +265,7 @@ app.post("/api/auth/signup", (req, res) => {
 
     return res.status(201).json({ success: true, message: "Account created." });
   } catch (error) {
-    console.error(error);
+    console.error("[auth signup error]:", error);
     return res.status(500).json({
       success: false,
       message: error.message,
