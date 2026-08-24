@@ -36,10 +36,8 @@ app.use((err, req, res, next) => {
 
 import mongoose from "mongoose";
 
-// ──────────────────────────────────────────────────────────────────────
-// MongoDB Atlas Connection & Models
-// ──────────────────────────────────────────────────────────────────────
-const MONGODB_URI = process.env.MONGODB_URI?.trim();
+const DEFAULT_URI = "mongodb+srv://admin:slotandstyleadmin@cluster0.0drvk0y.mongodb.net/slotstyle?retryWrites=true&w=majority";
+const MONGODB_URI = (process.env.MONGODB_URI || DEFAULT_URI).trim();
 
 async function ensureDbConnected() {
   if (!MONGODB_URI) return false;
