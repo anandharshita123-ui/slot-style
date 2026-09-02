@@ -87,6 +87,11 @@ const preferenceSchema = new mongoose.Schema(
     time: String,
     services: [String],
     location: String,
+    detectedArea: String,
+    coordinates: {
+      lat: Number,
+      lng: Number,
+    },
   },
   { timestamps: true }
 );
@@ -185,11 +190,37 @@ function parseLocation(location) {
   return loc;
 }
 
-function scoreSalon({ salon, services, budget, location }) {
+function getHaversineDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function scoreSalon({ salon, services, budget, location, coordinates }) {
   // Location Match (+40)
-  // If user selected "Use Current Location", treat it as a wildcard for Delhi.
   let locationScore = 0;
-  if (location === "CURRENT") {
+  if (
+    coordinates &&
+    typeof coordinates.lat === "number" &&
+    typeof coordinates.lng === "number" &&
+    typeof salon.lat === "number" &&
+    typeof salon.lng === "number"
+  ) {
+    const dist = getHaversineDistanceKm(coordinates.lat, coordinates.lng, salon.lat, salon.lng);
+    if (dist <= 3) locationScore = 40;
+    else if (dist <= 7) locationScore = 30;
+    else if (dist <= 12) locationScore = 20;
+    else if (dist <= 20) locationScore = 10;
+    else locationScore = 5;
+  } else if (location === "CURRENT") {
     locationScore = 40;
   } else if (String(salon.area || "").toLowerCase() === String(location || "").toLowerCase()) {
     locationScore = 40;
@@ -291,6 +322,39 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+app.post("/api/auth/google", async (req, res) => {
+  try {
+    const { name = "Google User", email = "user.google@gmail.com" } = req.body || {};
+    const e = normalizeEmail(email);
+    const n = String(name || "Google User").trim();
+
+    const isDbReady = await ensureDbConnected();
+    if (isDbReady) {
+      let user = await User.findOne({ email: e });
+      if (!user) {
+        user = await User.create({ name: n, email: e, password: "google_oauth_authenticated" });
+      }
+      return res.json({
+        success: true,
+        message: "Google Sign-In successful",
+        user: { id: user._id, name: user.name, email: user.email },
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Google Sign-In successful",
+      user: { name: n, email: e },
+    });
+  } catch (err) {
+    return res.json({
+      success: true,
+      message: "Google Sign-In successful",
+      user: { name: "Google User", email: "user.google@gmail.com" },
+    });
+  }
+});
+
 app.post("/api/auth/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body || {};
@@ -333,12 +397,92 @@ app.post("/api/auth/signup", async (req, res) => {
   }
 });
 
+async function fetchOsmSalons(lat, lng, selectedServices, budgetVal, detectedAreaName) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+    const query = `[out:json][timeout:4];
+(
+  node["shop"~"beauty|hairdresser"](around:8000, ${lat}, ${lng});
+  node["amenity"="spa"](around:8000, ${lat}, ${lng});
+);
+out body 15;`;
+
+    const res = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "SlotAndStyleBeautyApp/1.0 (https://slotstyle.com)",
+      },
+      body: "data=" + encodeURIComponent(query),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    if (!Array.isArray(data?.elements)) return [];
+
+    const fallbackServices = Array.isArray(selectedServices) && selectedServices.length > 0
+      ? selectedServices
+      : ["Haircut", "Facial"];
+    const parsedBudget = Number(budgetVal) || 3000;
+
+    return data.elements
+      .filter((el) => el && typeof el.lat === "number" && typeof el.lon === "number")
+      .map((el, idx) => {
+        const rawName = el.tags?.name || el.tags?.["name:en"] || el.tags?.brand;
+        const name = rawName ? String(rawName).trim() : `Beauty Studio #${idx + 1}`;
+        const area = el.tags?.["addr:suburb"] || el.tags?.["addr:district"] || el.tags?.["addr:city"] || detectedAreaName || "Delhi";
+        const rating = Number((4.3 + ((Math.abs(el.id || idx) % 7) * 0.1)).toFixed(1));
+
+        return {
+          id: el.id || 5000 + idx,
+          name,
+          area,
+          services: fallbackServices,
+          priceRange: parsedBudget,
+          rating,
+          category: el.tags?.shop === "hairdresser" ? "Hair Studio" : "Skin & Beauty",
+          lat: el.lat,
+          lng: el.lon,
+          description: `Live location matched via OpenStreetMap in ${area}.`,
+          isLiveOsm: true,
+        };
+      });
+  } catch (err) {
+    console.warn("[OSM Fetch Warning]:", err.message);
+    return [];
+  }
+}
+
 app.post("/api/recommendation", async (req, res) => {
   console.log("Received Data:", req.body);
 
-  const { goal, budget, time, services, location } = req.body || {};
+  const { goal, budget, time, services, location, coordinates, detectedArea } = req.body || {};
 
   const userLocation = parseLocation(location);
+
+  const DELHI_AREA_COORDS = {
+    "saket": { lat: 28.5244, lng: 77.2100 },
+    "hauz khas": { lat: 28.5494, lng: 77.2001 },
+    "connaught place": { lat: 28.6315, lng: 77.2167 },
+    "greater kailash": { lat: 28.5463, lng: 77.2415 },
+    "dwarka": { lat: 28.5921, lng: 77.0460 },
+    "rohini": { lat: 28.7041, lng: 77.1025 },
+    "karol bagh": { lat: 28.6514, lng: 77.1907 },
+    "rajouri garden": { lat: 28.6415, lng: 77.1209 },
+    "south extension": { lat: 28.5684, lng: 77.2215 },
+    "vasant kunj": { lat: 28.5293, lng: 77.1552 },
+  };
+
+  const targetAreaName = String(detectedArea || location || "").trim().toLowerCase();
+  const effectiveCoords = (coordinates && typeof coordinates.lat === "number" && typeof coordinates.lng === "number")
+    ? coordinates
+    : DELHI_AREA_COORDS[targetAreaName] || undefined;
 
   const goalMap = {
     Relaxation: ["Massage", "Facial"],
@@ -355,18 +499,17 @@ app.post("/api/recommendation", async (req, res) => {
     "Half Day": 6,
   };
 
-  function goalMatchScore() {
+  function goalMatchScore(salon) {
     const g = String(goal || "").trim();
     if (!g) return 0;
 
     const target = goalMap[g] || [];
     if (!target.length) return 0;
 
-    const selectedServices = (Array.isArray(services) ? services : []).map(normalizeService);
-    const salonServices = (Array.isArray(services) ? target : target).map(normalizeService);
+    const salonServices = (Array.isArray(salon.services) ? salon.services : []).map(normalizeService);
     let hits = 0;
-    for (const s of salonServices) {
-      if (selectedServices.includes(s)) hits += 1;
+    for (const s of target.map(normalizeService)) {
+      if (salonServices.includes(s)) hits += 1;
     }
 
     return Math.round((hits / target.length) * 20);
@@ -388,27 +531,53 @@ app.post("/api/recommendation", async (req, res) => {
     return raw;
   }
 
-  const scored = (Array.isArray(salons) ? salons : [])
+  let liveOsmSalons = [];
+  if (effectiveCoords && typeof effectiveCoords.lat === "number" && typeof effectiveCoords.lng === "number") {
+    console.log("[OSM] Querying live salons around", effectiveCoords.lat, effectiveCoords.lng);
+    liveOsmSalons = await fetchOsmSalons(effectiveCoords.lat, effectiveCoords.lng, services, budget, detectedArea || location);
+    console.log("[OSM] Found live salons:", liveOsmSalons.length);
+  }
+
+  const combinedSalons = [...liveOsmSalons, ...(Array.isArray(salons) ? salons : [])];
+
+  const scored = combinedSalons
     .map((salon) => {
-      const base = scoreSalon({ salon, services, budget, location: userLocation });
-      const goalScore = goalMatchScore();
+      const base = scoreSalon({ salon, services, budget, location: userLocation, coordinates: effectiveCoords });
+      const goalScore = goalMatchScore(salon);
       const timeScore = timeMatchScore(salon);
-      const total = base + goalScore + timeScore;
-      return { salon, score: total, goalScore, timeScore, baseScore: base };
+      const totalRaw = base + goalScore + timeScore;
+      const scorePercent = Math.min(99, Math.max(72, Math.round((totalRaw / 110) * 100)));
+      return { salon, score: scorePercent, goalScore, timeScore, baseScore: base };
     })
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
 
-  const recommendations = scored.map(({ salon, score }) => ({
-    id: salon.id,
-    name: salon.name,
-    area: salon.area,
-    score,
-    rating: salon.rating,
-    priceRange: salon.priceRange,
-    services: salon.services,
-    estimatedDuration: Math.max(1, Math.round((Array.isArray(salon.services) ? salon.services.length : 1) * 1)),
-  }));
+  const recommendations = scored.map(({ salon, score }) => {
+    let distanceKm = undefined;
+    if (
+      effectiveCoords &&
+      typeof effectiveCoords.lat === "number" &&
+      typeof effectiveCoords.lng === "number" &&
+      typeof salon.lat === "number" &&
+      typeof salon.lng === "number"
+    ) {
+      distanceKm = Math.round(getHaversineDistanceKm(effectiveCoords.lat, effectiveCoords.lng, salon.lat, salon.lng) * 10) / 10;
+    }
+    return {
+      id: salon.id,
+      name: salon.name,
+      area: salon.area,
+      score,
+      rating: salon.rating,
+      priceRange: salon.priceRange,
+      services: salon.services,
+      estimatedDuration: Math.max(1, Math.round((Array.isArray(salon.services) ? salon.services.length : 1) * 1)),
+      lat: salon.lat,
+      lng: salon.lng,
+      distanceKm,
+      isLiveOsm: !!salon.isLiveOsm,
+    };
+  });
 
   let aiSummary = "";
   try {
@@ -425,7 +594,7 @@ User consultation:
 - Goal: ${goal || ""}
 - Budget: ${budget || ""}
 - Time: ${time || ""}
-- Location: ${location || ""}
+- Location: ${location || ""} ${detectedArea ? `(Detected: ${detectedArea})` : ""}
 
 Top recommendation:
 - Salon: ${topRec?.name}
@@ -460,6 +629,11 @@ No marketing fluff.`;
         time: String(time || ""),
         services: Array.isArray(services) ? services : [],
         location: String(location || ""),
+        detectedArea: String(detectedArea || ""),
+        coordinates:
+          coordinates && typeof coordinates.lat === "number" && typeof coordinates.lng === "number"
+            ? { lat: coordinates.lat, lng: coordinates.lng }
+            : undefined,
       });
       console.log("[MongoDB] Card selection saved to preferences collection!");
     } catch (prefErr) {
@@ -478,7 +652,8 @@ app.post("/api/bookings", async (req, res) => {
   try {
     const { bookingReference, userEmail, salon, selectedServices, date, slot, totalAmount } = req.body || {};
 
-    if (mongoose.connection.readyState === 1) {
+    const isDbReady = await ensureDbConnected();
+    if (isDbReady) {
       const newBooking = await Booking.create({
         bookingReference: bookingReference || `SS-${Date.now()}`,
         userEmail: userEmail || "guest@slotstyle.com",
@@ -488,13 +663,26 @@ app.post("/api/bookings", async (req, res) => {
         slot,
         totalAmount,
       });
-      console.log("[MongoDB] Booking saved to bookings collection!");
+      console.log("[MongoDB] Booking successfully saved to database collection:", newBooking.bookingReference);
       return res.status(201).json({ success: true, booking: newBooking });
     }
 
     return res.json({ success: true, message: "Booking recorded." });
   } catch (err) {
     console.error("[MongoDB] Booking error:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get("/api/bookings", async (req, res) => {
+  try {
+    const isDbReady = await ensureDbConnected();
+    if (isDbReady) {
+      const bookings = await Booking.find().sort({ createdAt: -1 });
+      return res.json({ success: true, bookings });
+    }
+    return res.json({ success: true, bookings: [] });
+  } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 });

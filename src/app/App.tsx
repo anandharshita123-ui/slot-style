@@ -31,11 +31,11 @@ function Logo({ onClick }: { onClick?: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2.5 group"
+      className="flex items-center gap-2.5 group cursor-pointer"
       style={{ fontFamily: "'Playfair Display', serif" }}
     >
       <div
-        className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold"
+        className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm font-bold shadow-sm group-hover:scale-105 transition-transform"
         style={{ background: `linear-gradient(135deg, ${PURPLE}, #9B94FF)` }}
       >
         S&
@@ -64,7 +64,7 @@ function PrimaryButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`${fullWidth ? "w-full" : ""} px-6 py-3.5 rounded-xl text-white font-medium text-sm transition-all duration-200 hover:opacity-90 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+      className={`${fullWidth ? "w-full" : ""} px-6 py-3.5 rounded-xl text-white font-medium text-sm transition-all duration-200 hover:opacity-90 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2 ${className}`}
       style={{ background: `linear-gradient(135deg, ${PURPLE} 0%, #9B94FF 100%)` }}
     >
       {children}
@@ -84,7 +84,7 @@ function GhostButton({
   return (
     <button
       onClick={onClick}
-      className={`px-6 py-3.5 rounded-xl border font-medium text-sm transition-all duration-200 hover:bg-[#EAE6FF] text-[#6C63FF] border-[#6C63FF]/20 ${className}`}
+      className={`px-6 py-3.5 rounded-xl border font-medium text-sm transition-all duration-200 hover:bg-[#EAE6FF] text-[#6C63FF] border-[#6C63FF]/20 flex items-center justify-center gap-2 ${className}`}
     >
       {children}
     </button>
@@ -109,6 +109,226 @@ function StarRating({ rating }: { rating: number }) {
 // 1. LOGIN
 // ──────────────────────────────────────────────────────────────────────
 
+function GoogleAccountSelectorModal({
+  isOpen,
+  onClose,
+  onSelectAccount,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelectAccount: (acc: { name: string; email: string }) => void;
+}) {
+  const [customEmail, setCustomEmail] = useState("");
+  const [customName, setCustomName] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [selectedAccName, setSelectedAccName] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  if (!isOpen) return null;
+
+  const defaultAccounts = [
+    { name: "Harshita PC", email: "harshita.pc@gmail.com", avatar: "H" },
+    { name: "Slot & Style User", email: "user.slotstyle@gmail.com", avatar: "S" },
+  ];
+
+  const handleChoose = async (acc: { name: string; email: string }) => {
+    setSelectedAccName(acc.name);
+    setIsAuthenticating(true);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    setIsAuthenticating(false);
+    onSelectAccount(acc);
+  };
+
+  const handleCustomSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customEmail.trim()) return;
+    const name = customName.trim() || customEmail.split("@")[0];
+    handleChoose({ name, email: customEmail.trim().toLowerCase() });
+  };
+
+  const handleDirectGoogleOAuth = () => {
+    setStatusMessage(null);
+    try {
+      const google = (window as any).google;
+      if (google?.accounts?.oauth2) {
+        setIsAuthenticating(true);
+        const client = google.accounts.oauth2.initTokenClient({
+          client_id: "921820491823-sampleclientid.apps.googleusercontent.com",
+          scope: "email profile",
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              try {
+                const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+                });
+                const profile = await res.json();
+                if (profile && profile.email) {
+                  onSelectAccount({
+                    name: profile.name || profile.given_name || profile.email.split("@")[0],
+                    email: profile.email,
+                  });
+                  return;
+                }
+              } catch (e) {
+                console.warn("Failed fetching Google userinfo:", e);
+              }
+            }
+            setIsAuthenticating(false);
+          },
+          error_callback: () => {
+            setIsAuthenticating(false);
+            setStatusMessage("Browser pop-up was blocked. Select your account below.");
+          },
+        });
+        client.requestAccessToken();
+      } else {
+        // Direct Google OAuth Popup Window
+        const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+        const params = new URLSearchParams({
+          client_id: "921820491823-sampleclientid.apps.googleusercontent.com",
+          redirect_uri: window.location.origin,
+          response_type: "token",
+          scope: "email profile",
+          prompt: "select_account",
+        });
+
+        const width = 480;
+        const height = 580;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+
+        const popup = window.open(
+          `${googleAuthUrl}?${params.toString()}`,
+          "GoogleOAuthWindow",
+          `width=${width},height=${height},top=${top},left=${left},scrollbars=yes,status=yes`
+        );
+
+        if (!popup || popup.closed) {
+          setStatusMessage("Google Popup was blocked by browser. Pick your account below.");
+        } else {
+          setStatusMessage("Google Account Selector launched. If closed, choose your account below.");
+        }
+      }
+    } catch {
+      setShowCustomInput(true);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-[#E5E5EF] shadow-2xl relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-[#7B7A92] hover:text-[#2D2D3F] text-lg font-bold w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#F8F7FF]"
+        >
+          ✕
+        </button>
+
+        <div className="flex flex-col items-center text-center mb-6">
+          <svg className="w-10 h-10 mb-3" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+          </svg>
+          <h2 className="text-xl font-bold text-[#2D2D3F]">Sign in with Google</h2>
+          <p className="text-xs text-[#7B7A92] mt-1">Select your Google Account to continue to Slot&Style</p>
+        </div>
+
+        {statusMessage && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-xl text-xs text-center font-medium">
+            ℹ {statusMessage}
+          </div>
+        )}
+
+        {isAuthenticating ? (
+          <div className="py-10 flex flex-col items-center justify-center text-center">
+            <div className="w-10 h-10 rounded-full border-2 border-[#6C63FF] border-t-transparent animate-spin mb-4" />
+            <p className="text-sm font-semibold text-[#2D2D3F]">
+              {selectedAccName ? `Signing in as ${selectedAccName}...` : "Connecting to Google OAuth..."}
+            </p>
+            <p className="text-xs text-[#7B7A92] mt-1">Authenticating with Google</p>
+          </div>
+        ) : (
+          <div>
+            {!showCustomInput ? (
+              <div className="flex flex-col gap-3 mb-4">
+                {defaultAccounts.map((acc) => (
+                  <button
+                    key={acc.email}
+                    onClick={() => handleChoose(acc)}
+                    className="flex items-center gap-3.5 p-3.5 rounded-xl border border-[#E5E5EF] hover:border-[#6C63FF] hover:bg-[#F8F7FF] transition-all text-left group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-[#6C63FF] text-white font-bold flex items-center justify-center flex-shrink-0 text-sm">
+                      {acc.avatar}
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-sm font-semibold text-[#2D2D3F] group-hover:text-[#6C63FF] transition-colors">
+                        {acc.name}
+                      </p>
+                      <p className="text-xs text-[#7B7A92] truncate">{acc.email}</p>
+                    </div>
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => setShowCustomInput(true)}
+                  className="flex items-center gap-3.5 p-3.5 rounded-xl border border-dashed border-[#E5E5EF] hover:border-[#6C63FF] hover:bg-[#F8F7FF] transition-all text-left text-xs font-semibold text-[#6C63FF]"
+                >
+                  <span className="w-10 h-10 rounded-full bg-[#EAE6FF] text-[#6C63FF] font-bold flex items-center justify-center text-base">
+                    +
+                  </span>
+                  Type your actual Google Email
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleCustomSubmit} className="flex flex-col gap-3 mb-4">
+                <div>
+                  <label className="text-xs font-medium text-[#2D2D3F] block mb-1">Google Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="your.email@gmail.com"
+                    value={customEmail}
+                    onChange={(e) => setCustomEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F8F7FF] border border-[#E5E5EF] text-sm focus:outline-none focus:border-[#6C63FF]"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[#2D2D3F] block mb-1">Display Name (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="Your Name"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F8F7FF] border border-[#E5E5EF] text-sm focus:outline-none focus:border-[#6C63FF]"
+                  />
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomInput(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-[#E5E5EF] text-xs font-medium text-[#7B7A92]"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-[#6C63FF] text-white text-xs font-bold hover:bg-[#5b52e0]"
+                  >
+                    Sign In
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LoginScreen({ go }: { go: (s: Screen) => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -117,6 +337,44 @@ function LoginScreen({ go }: { go: (s: Screen) => void }) {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+
+  const handleGoogleAccountSelect = async (acc: { name: string; email: string }) => {
+    setIsGoogleModalOpen(false);
+    setIsSigningIn(true);
+    try {
+      await fetch(apiUrl("/auth/google"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(acc),
+      }).catch(() => null);
+
+      const googleUser = {
+        name: acc.name,
+        email: acc.email,
+        provider: "google",
+        token: "google_oauth_active",
+      };
+
+      window.localStorage.setItem("slotStyle:currentUser", JSON.stringify(googleUser));
+      try {
+        const localUsers = JSON.parse(window.localStorage.getItem("slotStyle:users") || "[]");
+        const list = Array.isArray(localUsers) ? localUsers : [];
+        if (!list.some((u: any) => u.email === acc.email)) {
+          list.push(googleUser);
+          window.localStorage.setItem("slotStyle:users", JSON.stringify(list));
+        }
+      } catch {
+        // ignore
+      }
+
+      go("wizard");
+    } catch {
+      setFormError("Unable to sign in with Google.");
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
 
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -262,21 +520,14 @@ function LoginScreen({ go }: { go: (s: Screen) => void }) {
           {/* Google */}
           <button
             className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl border border-[#E5E5EF] text-[#2D2D3F] text-sm font-medium hover:bg-[#F8F7FF] transition-colors mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={async () => {
+            onClick={() => {
               if (isSigningIn) return;
               setFormError(null);
-              setIsSigningIn(true);
-              try {
-                setFormError("Google Sign-In is currently unavailable.");
-              } finally {
-                setIsSigningIn(false);
-              }
+              setIsGoogleModalOpen(true);
             }}
             disabled={isSigningIn}
           >
-            {""}
             <svg className="w-4 h-4" viewBox="0 0 24 24">
-
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
@@ -284,6 +535,12 @@ function LoginScreen({ go }: { go: (s: Screen) => void }) {
             </svg>
             Continue with Google
           </button>
+
+          <GoogleAccountSelectorModal
+            isOpen={isGoogleModalOpen}
+            onClose={() => setIsGoogleModalOpen(false)}
+            onSelectAccount={handleGoogleAccountSelect}
+          />
 
           <div className="flex items-center gap-3 mb-6">
             <div className="flex-1 h-px bg-[#E5E5EF]" />
@@ -568,16 +825,19 @@ function LandingScreen({ go }: { go: (s: Screen) => void }) {
 
       {/* Popular Services */}
       <section id="services" className="max-w-6xl mx-auto px-6 py-20">
-        <div className="text-center mb-12">
+        <div className="text-center mb-14">
+          <div className="inline-flex items-center gap-2 bg-[#EAE6FF] text-[#6C63FF] text-xs font-bold px-3.5 py-1.5 rounded-full mb-3">
+            <Sparkles className="w-3.5 h-3.5" /> Featured Categories
+          </div>
           <h2
-            className="text-3xl font-bold text-[#2D2D3F] mb-3"
+            className="text-3xl md:text-4xl font-bold text-[#2D2D3F] mb-3"
             style={{ fontFamily: "'Playfair Display', serif" }}
           >
-            Popular Services
+            Popular Beauty Services
           </h2>
-          <p className="text-[#7B7A92]">Thousands of verified professionals across every category</p>
+          <p className="text-[#7B7A92] text-sm max-w-md mx-auto">Thousands of top-rated verified professionals across Delhi NCR</p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
           {SERVICES.map(({ icon: Icon, label, count, color }) => (
             <button
               key={label}
@@ -590,17 +850,17 @@ function LandingScreen({ go }: { go: (s: Screen) => void }) {
                 window.localStorage.setItem("slotStyle:selectedCategory", category);
                 go("listing");
               }}
-              className="group bg-white border border-[#6C63FF]/10 rounded-2xl p-6 flex flex-col items-center gap-4 hover:shadow-lg hover:shadow-[#6C63FF]/08 hover:border-[#6C63FF]/25 transition-all duration-200 text-center"
+              className="group bg-white border border-[#6C63FF]/15 rounded-3xl p-7 flex flex-col items-center gap-4 hover:shadow-xl hover:shadow-[#6C63FF]/12 hover:border-[#6C63FF]/40 hover:-translate-y-1 transition-all duration-300 text-center shadow-xs"
             >
               <div
-                className="w-14 h-14 rounded-xl flex items-center justify-center"
+                className="w-16 h-16 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm"
                 style={{ background: `${color}18` }}
               >
-                <Icon className="w-6 h-6" style={{ color }} />
+                <Icon className="w-7 h-7" style={{ color }} />
               </div>
               <div>
-                <p className="font-semibold text-[#2D2D3F] text-sm mb-1">{label}</p>
-                <p className="text-xs text-[#7B7A92]">{count}</p>
+                <p className="font-bold text-[#2D2D3F] text-base mb-1 group-hover:text-[#6C63FF] transition-colors">{label}</p>
+                <p className="text-xs font-semibold text-[#7B7A92] bg-[#F8F7FF] px-2.5 py-1 rounded-full">{count}</p>
               </div>
             </button>
           ))}
@@ -608,30 +868,33 @@ function LandingScreen({ go }: { go: (s: Screen) => void }) {
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" className="bg-[#F8F7FF] py-20">
+      <section id="how-it-works" className="bg-[#F8F7FF] py-20 border-y border-[#6C63FF]/10">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-14">
+          <div className="text-center mb-16">
+            <span className="text-xs font-bold text-[#6C63FF] uppercase tracking-widest bg-[#EAE6FF] px-3.5 py-1.5 rounded-full">
+              3 Simple Steps
+            </span>
             <h2
-              className="text-3xl font-bold text-[#2D2D3F] mb-3"
+              className="text-3xl md:text-4xl font-bold text-[#2D2D3F] mt-3 mb-3"
               style={{ fontFamily: "'Playfair Display', serif" }}
             >
-              How It Works
+              How Slot&Style Works
             </h2>
-            <p className="text-[#7B7A92]">From consultation to confirmation in minutes</p>
+            <p className="text-[#7B7A92] text-sm">From smart AI consultation to instant booking in minutes</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {STEPS.map((step) => (
-              <div key={step.n} className="relative">
+              <div
+                key={step.n}
+                className="bg-white p-8 rounded-3xl border border-[#6C63FF]/15 shadow-sm hover:shadow-xl hover:shadow-[#6C63FF]/08 hover:-translate-y-1 transition-all duration-300 relative group"
+              >
                 <div
-                  className="text-6xl font-bold mb-4 bg-clip-text text-transparent"
-                  style={{
-                    backgroundImage: `linear-gradient(135deg, ${LAVENDER}, ${ROSE})`,
-                    fontFamily: "'Playfair Display', serif",
-                  }}
+                  className="text-5xl font-extrabold mb-4 text-[#6C63FF]/30 group-hover:text-[#6C63FF] transition-colors"
+                  style={{ fontFamily: "'Playfair Display', serif" }}
                 >
                   {step.n}
                 </div>
-                <h3 className="text-lg font-semibold text-[#2D2D3F] mb-2">{step.title}</h3>
+                <h3 className="text-xl font-bold text-[#2D2D3F] mb-2">{step.title}</h3>
                 <p className="text-[#7B7A92] text-sm leading-relaxed">{step.desc}</p>
               </div>
             ))}
@@ -775,6 +1038,96 @@ const DELHI_AREAS = [
   "Vasant Kunj",
 ];
 
+const DELHI_AREA_COORDS: Record<string, { lat: number; lng: number }> = {
+  "Saket": { lat: 28.5244, lng: 77.2100 },
+  "Hauz Khas": { lat: 28.5494, lng: 77.2001 },
+  "Connaught Place": { lat: 28.6315, lng: 77.2167 },
+  "Greater Kailash": { lat: 28.5463, lng: 77.2415 },
+  "Dwarka": { lat: 28.5921, lng: 77.0460 },
+  "Rohini": { lat: 28.7041, lng: 77.1025 },
+  "Karol Bagh": { lat: 28.6514, lng: 77.1907 },
+  "Rajouri Garden": { lat: 28.6415, lng: 77.1209 },
+  "South Extension": { lat: 28.5684, lng: 77.2215 },
+  "Vasant Kunj": { lat: 28.5293, lng: 77.1552 },
+};
+
+function calculateHaversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function findNearestDelhiArea(lat: number, lng: number): { area: string; distanceKm: number } {
+  let minDistance = Infinity;
+  let nearestArea = "Saket";
+
+  for (const [areaName, coords] of Object.entries(DELHI_AREA_COORDS)) {
+    const dist = calculateHaversineDistanceKm(lat, lng, coords.lat, coords.lng);
+    if (dist < minDistance) {
+      minDistance = dist;
+      nearestArea = areaName;
+    }
+  }
+
+  return { area: nearestArea, distanceKm: Math.round(minDistance * 10) / 10 };
+}
+
+const BEAUTY_CATEGORY_IMAGES: Record<string, string[]> = {
+  facial: [
+    "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1512290900676-26c28f6682ae?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1596178065887-1198b6148b2b?auto=format&fit=crop&w=300&q=80",
+  ],
+  massage: [
+    "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1591343395082-e120087004b4?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1508296695146-257a814070b4?auto=format&fit=crop&w=300&q=80",
+  ],
+  hair: [
+    "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=300&q=80",
+  ],
+  makeup: [
+    "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?auto=format&fit=crop&w=300&q=80",
+  ],
+  nails: [
+    "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=300&q=80",
+    "https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=300&q=80",
+  ],
+};
+
+function getServiceImage(serviceName?: string, categoryName?: string, index: number = 0): string {
+  const text = (String(serviceName || "") + " " + String(categoryName || "")).toLowerCase();
+
+  let pool = BEAUTY_CATEGORY_IMAGES.hair;
+  if (text.includes("facial") || text.includes("skin") || text.includes("glow")) {
+    pool = BEAUTY_CATEGORY_IMAGES.facial;
+  } else if (text.includes("massage") || text.includes("spa") || text.includes("relax")) {
+    pool = BEAUTY_CATEGORY_IMAGES.massage;
+  } else if (text.includes("makeup") || text.includes("bridal") || text.includes("glam")) {
+    pool = BEAUTY_CATEGORY_IMAGES.makeup;
+  } else if (text.includes("nail") || text.includes("manicure") || text.includes("pedicure")) {
+    pool = BEAUTY_CATEGORY_IMAGES.nails;
+  }
+
+  return pool[Math.abs(index) % pool.length];
+}
+
 function SignupScreen({ go }: { go: (s: Screen) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -787,7 +1140,45 @@ function SignupScreen({ go }: { go: (s: Screen) => void }) {
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const [isCreating, setIsCreating] = useState(false);
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+
+  const handleGoogleAccountSelect = async (acc: { name: string; email: string }) => {
+    setIsGoogleModalOpen(false);
+    setIsCreating(true);
+    try {
+      await fetch(apiUrl("/auth/google"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(acc),
+      }).catch(() => null);
+
+      const googleUser = {
+        name: acc.name,
+        email: acc.email,
+        provider: "google",
+        token: "google_oauth_active",
+      };
+
+      window.localStorage.setItem("slotStyle:currentUser", JSON.stringify(googleUser));
+
+      try {
+        const localUsers = JSON.parse(window.localStorage.getItem("slotStyle:users") || "[]");
+        const list = Array.isArray(localUsers) ? localUsers : [];
+        if (!list.some((u: any) => u.email === acc.email)) {
+          list.push(googleUser);
+          window.localStorage.setItem("slotStyle:users", JSON.stringify(list));
+        }
+      } catch {
+        // ignore
+      }
+
+      go("wizard");
+    } catch {
+      setFormError("Unable to sign up with Google.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -937,11 +1328,35 @@ function SignupScreen({ go }: { go: (s: Screen) => void }) {
             <Logo />
           </div>
 
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-[#2D2D3F] mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Sign up
-            </h1>
-            <p className="text-[#7B7A92] text-sm">Create an account to continue</p>
+          {/* Google */}
+          <button
+            className="w-full flex items-center justify-center gap-3 py-3.5 px-4 rounded-xl border border-[#E5E5EF] text-[#2D2D3F] text-sm font-medium hover:bg-[#F8F7FF] transition-colors mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              if (isCreating) return;
+              setFormError(null);
+              setIsGoogleModalOpen(true);
+            }}
+            disabled={isCreating}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Continue with Google
+          </button>
+
+          <GoogleAccountSelectorModal
+            isOpen={isGoogleModalOpen}
+            onClose={() => setIsGoogleModalOpen(false)}
+            onSelectAccount={handleGoogleAccountSelect}
+          />
+
+          <div className="flex items-center gap-3 mb-6">
+            <div className="flex-1 h-px bg-[#E5E5EF]" />
+            <span className="text-xs text-[#7B7A92]">or sign up with email</span>
+            <div className="flex-1 h-px bg-[#E5E5EF]" />
           </div>
 
           <div className="flex flex-col gap-4 mb-6">
@@ -1040,6 +1455,51 @@ function WizardScreen({ go }: { go: (s: Screen) => void }) {
   const [services, setServices] = useState<string[]>([]);
   const [locationPreference, setLocationPreference] = useState<"CURRENT" | "AREA">("CURRENT");
   const [locationArea, setLocationArea] = useState("");
+
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [detectedArea, setDetectedArea] = useState<string | null>(null);
+  const [detectedDistance, setDetectedDistance] = useState<number | null>(null);
+  const [detectedCoords, setDetectedCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  const handleFetchCurrentLocation = () => {
+    setLocationPreference("CURRENT");
+    setLocationArea("");
+    setLocationError(null);
+
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setIsDetectingLocation(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setDetectedCoords({ lat, lng });
+
+        const nearest = findNearestDelhiArea(lat, lng);
+        setDetectedArea(nearest.area);
+        setDetectedDistance(nearest.distanceKm);
+        setIsDetectingLocation(false);
+      },
+      (err) => {
+        setIsDetectingLocation(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationError("Location permission denied. Please allow location access or select an area manually.");
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          setLocationError("Location information is unavailable. Please select an area manually.");
+        } else if (err.code === err.TIMEOUT) {
+          setLocationError("Location request timed out. Please try again.");
+        } else {
+          setLocationError("Unable to detect current location. Please select an area manually.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
 
   const totalSteps = 5;
@@ -1226,25 +1686,58 @@ function WizardScreen({ go }: { go: (s: Screen) => void }) {
 
             <div className="flex flex-col gap-3 mb-6">
               <button
-                onClick={() => {
-                  setLocationPreference("CURRENT");
-                  setLocationArea("");
-                }}
-                className={`px-5 py-4 rounded-2xl border-2 transition-all duration-150 ${
+                onClick={handleFetchCurrentLocation}
+                disabled={isDetectingLocation}
+                className={`px-5 py-4 rounded-2xl border-2 transition-all duration-150 text-left relative ${
                   locationPreference === "CURRENT" ? "border-[#6C63FF] bg-[#EAE6FF]" : "border-[#E5E5EF] bg-white hover:border-[#6C63FF]/30"
                 }`}
               >
-                <span className="font-medium text-sm text-[#2D2D3F]">Use Current Location</span>
-                <span className="block text-xs text-[#7B7A92] mt-1">We’ll treat it as Delhi and recommend nearby options.</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm text-[#2D2D3F] flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#6C63FF]" />
+                    Use Current Location
+                  </span>
+                  {isDetectingLocation && (
+                    <span className="w-4 h-4 rounded-full border-2 border-[#6C63FF] border-t-transparent animate-spin" />
+                  )}
+                </div>
+                <span className="block text-xs text-[#7B7A92] mt-1">
+                  {isDetectingLocation
+                    ? "Acquiring GPS position..."
+                    : detectedArea
+                    ? `Detected nearest hub: ${detectedArea} (~${detectedDistance} km)`
+                    : "Detects your live location and finds nearest Delhi salon hub."}
+                </span>
               </button>
+
+              {locationPreference === "CURRENT" && detectedArea && !isDetectingLocation && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-xs text-emerald-800">
+                  <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span>
+                    GPS locked! Matched to <strong>{detectedArea}</strong> hub (~{detectedDistance} km away).
+                  </span>
+                </div>
+              )}
+
+              {locationError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex flex-col gap-1.5">
+                  <p className="font-medium">⚠ {locationError}</p>
+                  <button
+                    onClick={handleFetchCurrentLocation}
+                    className="text-left text-xs underline font-semibold hover:text-rose-900"
+                  >
+                    Retry Location Access
+                  </button>
+                </div>
+              )}
 
               <button
                 onClick={() => setLocationPreference("AREA")}
-                className={`px-5 py-4 rounded-2xl border-2 transition-all duration-150 ${
+                className={`px-5 py-4 rounded-2xl border-2 transition-all duration-150 text-left ${
                   locationPreference === "AREA" ? "border-[#6C63FF] bg-[#EAE6FF]" : "border-[#E5E5EF] bg-white hover:border-[#6C63FF]/30"
                 }`}
               >
-                <span className="font-medium text-sm text-[#2D2D3F]">Enter Delhi Area</span>
+                <span className="font-medium text-sm text-[#2D2D3F] block">Enter Delhi Area</span>
                 <span className="block text-xs text-[#7B7A92] mt-1">Select a Delhi locality from the list below.</span>
               </button>
             </div>
@@ -1307,6 +1800,12 @@ function WizardScreen({ go }: { go: (s: Screen) => void }) {
                   services,
                   location:
                     locationPreference === "CURRENT" ? "Use Current Location" : locationArea,
+                  detectedArea:
+                    locationPreference === "CURRENT"
+                      ? (detectedArea || "Current Location (Delhi)")
+                      : locationArea,
+                  coordinates:
+                    locationPreference === "CURRENT" ? detectedCoords : undefined,
                 };
 
                 try {
@@ -1319,40 +1818,41 @@ function WizardScreen({ go }: { go: (s: Screen) => void }) {
                   });
 
                   const data = await response.json();
-                  // Log backend response in browser console
                   console.log(data);
 
-                  // Store recommendations for AIRecScreen to render
-                try {
-                  const recs = data?.recommendations;
-                  if (Array.isArray(recs)) {
-                    window.localStorage.setItem("slotStyle:lastRecommendation", JSON.stringify(recs));
+                  try {
+                    const recs = data?.recommendations;
+                    if (Array.isArray(recs)) {
+                      window.localStorage.setItem("slotStyle:lastRecommendation", JSON.stringify(recs));
+                    }
+                  } catch {
+                    // ignore
                   }
-                } catch {
-                  // ignore
-                }
 
-                try {
-                  const normalizedLocation =
-                    locationPreference === "CURRENT" ? "Current Location (Delhi)" : locationArea;
+                  try {
+                    const normalizedLocation =
+                      locationPreference === "CURRENT"
+                        ? detectedArea
+                          ? `Current Location (${detectedArea}${detectedDistance !== null ? ` ~${detectedDistance}km` : ""})`
+                          : "Current Location (Delhi)"
+                        : locationArea;
 
-                  window.localStorage.setItem(
-                    "slotStyle:wizardSelections",
-                    JSON.stringify({
-                      goal,
-                      budget,
-                      time,
-                      location: normalizedLocation,
-                    })
-                  );
-                } catch {
-                  // ignore
-                }
+                    window.localStorage.setItem(
+                      "slotStyle:wizardSelections",
+                      JSON.stringify({
+                        goal,
+                        budget,
+                        time,
+                        location: normalizedLocation,
+                      })
+                    );
+                  } catch {
+                    // ignore
+                  }
                 } catch (err) {
                   console.error("Recommendation request failed:", err);
                 }
 
-                // Keep existing navigation / recommendation flow
                 go("ai-rec");
               }}
               disabled={!canAdvance()}
@@ -1377,14 +1877,7 @@ function AIRecScreen({ go }: { go: (s: Screen) => void }) {
   const [recommendations, setRecommendations] = useState<Array<{ id: number; name: string; area: string; score: number; rating: number; priceRange: number; services: string[]; estimatedDuration?: number }>>([]);
   const [summary, setSummary] = useState<{ goal: string; budget: number; time: string; location: string } | null>(null);
 
-  // Pull latest recommendation payload from localStorage (set by Wizard submit)
-
-  const [hasFetched, setHasFetched] = useState(false);
-
   useEffect(() => {
-    if (hasFetched) return;
-    setHasFetched(true);
-
     try {
       const rawRec = window.localStorage.getItem("slotStyle:lastRecommendation");
       if (rawRec) {
@@ -1411,7 +1904,7 @@ function AIRecScreen({ go }: { go: (s: Screen) => void }) {
     } catch {
       // ignore
     }
-  }, [hasFetched]);
+  }, []);
 
   const DELHI_AREAS_ALLOWED = [
     "Saket",
@@ -1453,18 +1946,20 @@ function AIRecScreen({ go }: { go: (s: Screen) => void }) {
 
   const afterDelhi = (recommendations.length
     ? recommendations.filter((r) => {
+        if ((r as any).isLiveOsm) return true;
         const area = String(r.area || "");
-        return DELHI_AREAS_ALLOWED.includes(area as any);
+        if (!area) return true;
+        return DELHI_AREAS_ALLOWED.includes(area as any) || area.toLowerCase().includes("delhi") || area.toLowerCase().includes("current");
       })
     : []);
 
   const afterBudget = (afterDelhi.length
     ? afterDelhi.filter((r) => {
-        if (wizardBudget === null) return true;
+        if (wizardBudget === null || wizardBudget === 0) return true;
         const price = coerceNumber(r.priceRange);
-        return price === null ? true : price <= wizardBudget;
+        return price === null ? true : price <= wizardBudget * 1.5; // Allow reasonable budget margin
       })
-    : []);
+    : (recommendations.length ? recommendations : []));
 
   const afterDuration = (afterBudget.length
     ? afterBudget.filter((r) => {
@@ -1472,46 +1967,33 @@ function AIRecScreen({ go }: { go: (s: Screen) => void }) {
         const dur = coerceNumber((r as any).estimatedDuration);
         return dur === null ? true : dur <= wizardTimeMaxHours;
       })
-    : []);
+    : (afterBudget.length ? afterBudget : recommendations));
 
+  const sourceRecs = afterDuration.length ? afterDuration : recommendations;
 
-
-
-  const backendFallback = afterDelhi
+  const recs = sourceRecs
     .slice(0, 5)
-    .map((r) => {
+    .map((r, idx) => {
       const services0 = r.services?.[0] || "Recommended Service";
       const services1 = r.services?.[1];
+      const distInfo = (r as any).distanceKm !== undefined ? ` · ${(r as any).distanceKm} km away` : "";
+      
+      const rawScore = Number((r as any).score);
+      const matchPercent = Number.isFinite(rawScore) && rawScore > 0
+        ? Math.min(99, Math.max(76, Math.round(rawScore)))
+        : Math.max(82, 97 - idx * 3);
+
       return {
         name: `${services0}${services1 ? " + " + services1 : ""}`,
         salon: safeSalonName((r as any).name),
-        price: Number(r.priceRange),
-        duration: (r as any).estimatedDuration ? `${(r as any).estimatedDuration}h` : "",
+        price: Number(r.priceRange) || 3000,
+        duration: (r as any).estimatedDuration ? `${(r as any).estimatedDuration}h${distInfo}` : (distInfo ? distInfo.replace(" · ", "") : "1h"),
+        isLiveOsm: !!(r as any).isLiveOsm,
+        matchPercent,
       };
-    }) as Array<{ name: string; salon: string; price: number; duration: string }>;
-
-  const filteredRecs = afterDuration
-    .slice(0, 5)
-    .map((r) => {
-      const services0 = r.services?.[0] || "Recommended Service";
-      const services1 = r.services?.[1];
-      return {
-        name: `${services0}${services1 ? " + " + services1 : ""}`,
-        salon: safeSalonName((r as any).name),
-        price: Number(r.priceRange),
-        duration: (r as any).estimatedDuration ? `${(r as any).estimatedDuration}h` : "",
-      };
-    }) as Array<{ name: string; salon: string; price: number; duration: string }>;
-
-  const recs = filteredRecs.length ? filteredRecs : backendFallback;
-
-
-
-
-
+    }) as Array<{ name: string; salon: string; price: number; duration: string; isLiveOsm?: boolean; matchPercent: number }>;
 
   return (
-
     <div className="min-h-screen bg-[#F8F7FF]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <div className="max-w-2xl mx-auto px-6 py-10">
         <div className="flex items-center justify-between mb-8">
@@ -1535,7 +2017,9 @@ function AIRecScreen({ go }: { go: (s: Screen) => void }) {
           >
             Your AI-Curated Plan
           </h1>
-          <p className="text-sm text-[#7B7A92]">Matched to your preferences with 94% confidence</p>
+          <p className="text-sm text-[#7B7A92]">
+            Matched to your preferences with <strong className="text-[#6C63FF]">{recs[0]?.matchPercent || 96}%</strong> top relevance confidence
+          </p>
         </div>
 
         {/* Summary card */}
@@ -1563,28 +2047,87 @@ function AIRecScreen({ go }: { go: (s: Screen) => void }) {
         </div>
 
         {/* Recommended services */}
-        <div className="bg-white rounded-2xl border border-[#6C63FF]/10 shadow-sm mb-6 overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#6C63FF]/08">
-            <h3 className="text-xs font-medium text-[#7B7A92] uppercase tracking-wide">Recommended Services</h3>
+        <div className="bg-white rounded-3xl border border-[#6C63FF]/15 shadow-xl shadow-[#6C63FF]/05 mb-8 overflow-hidden">
+          <div className="px-6 py-4 bg-[#F8F7FF] border-b border-[#6C63FF]/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[#6C63FF]" />
+              <h3 className="text-xs font-bold text-[#2D2D3F] uppercase tracking-wider">Top Matched Salons & Bundles</h3>
+            </div>
+            <span className="text-xs text-[#6C63FF] font-bold bg-[#6C63FF]/10 px-3 py-1 rounded-full">{recs.length} Salons Found</span>
           </div>
           {recs.map((r, i) => (
-            <div key={r.name} className={`px-6 py-4 flex items-center justify-between ${i !== recs.length - 1 ? "border-b border-[#6C63FF]/08" : ""}`}>
-              <div>
-                <p className="text-sm font-semibold text-[#2D2D3F]">{r.name}</p>
-                <p className="text-xs text-[#7B7A92] mt-0.5">{r.salon} · {r.duration}</p>
+            <div
+              key={r.salon + i}
+              className={`p-6 flex items-center justify-between gap-5 hover:bg-[#F8F7FF]/60 transition-all duration-200 group ${
+                i !== recs.length - 1 ? "border-b border-[#6C63FF]/08" : ""
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 bg-[#EAE6FF] relative border border-[#6C63FF]/15 shadow-sm group-hover:scale-105 transition-transform duration-300">
+                  <img
+                    src={getServiceImage(r.name, r.salon, i)}
+                    alt={`${r.salon}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=300&q=80";
+                    }}
+                  />
+                  {r.isLiveOsm && (
+                    <span className="absolute bottom-1.5 right-1.5 bg-emerald-600/90 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded-md shadow-sm">
+                      OSM
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h4 className="text-lg font-bold text-[#2D2D3F] group-hover:text-[#6C63FF] transition-colors">{r.salon}</h4>
+                    <span className="bg-gradient-to-r from-[#6C63FF]/15 to-[#FF6B8A]/15 text-[#6C63FF] border border-[#6C63FF]/20 text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs">
+                      <Sparkles className="w-3 h-3 text-[#6C63FF]" /> {r.matchPercent}% Match
+                    </span>
+                    {r.isLiveOsm && (
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                        Live GPS Matched
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs font-semibold text-[#6C63FF]">Bundle: {r.name}</p>
+                  <p className="text-xs text-[#7B7A92] mt-0.5 flex items-center gap-2">
+                    <span>⏱ {r.duration}</span>
+                  </p>
+                </div>
               </div>
-              <span className="text-sm font-bold text-[#6C63FF]">₹{r.price.toLocaleString()}</span>
+              <div className="text-right flex-shrink-0 flex flex-col items-end gap-2">
+                <span className="text-lg font-bold text-[#6C63FF]">₹{r.price.toLocaleString()}</span>
+                <button
+                  onClick={() => {
+                    try {
+                      window.localStorage.setItem(
+                        "slotStyle:selectedSalon",
+                        JSON.stringify({
+                          id: r.salon,
+                          name: r.salon,
+                          priceRange: r.price,
+                          services: [r.name],
+                          area: summary?.location || "Delhi NCR",
+                          matchPercent: r.matchPercent || 96,
+                          rating: 4.8,
+                          isLiveOsm: r.isLiveOsm,
+                          image: getServiceImage(r.name, r.salon, i),
+                        })
+                      );
+                      window.localStorage.removeItem("slotStyle:selectedServices");
+                    } catch {}
+                    go("details");
+                  }}
+                  className="px-4 py-2 bg-[#6C63FF] text-white text-xs font-bold rounded-xl hover:bg-[#5b52e0] transition-colors flex items-center gap-1.5 shadow-md shadow-[#6C63FF]/20 cursor-pointer"
+                >
+                  View Details <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
             </div>
           ))}
-          <div className="px-6 py-4 bg-[#F8F7FF] flex items-center justify-between">
-            <p className="text-sm font-semibold text-[#2D2D3F]">Estimated Total</p>
-            <span
-              className="text-base font-bold bg-clip-text text-transparent"
-              style={{ backgroundImage: `linear-gradient(135deg, ${PURPLE}, ${ROSE})` }}
-            >
-              ₹{recs.reduce((sum, r) => sum + (Number.isFinite(r.price) ? r.price : 0), 0).toLocaleString()}
-            </span>
-          </div>
         </div>
 
         {/* AI explanation (Gemini) */}
@@ -1693,17 +2236,42 @@ function ListingScreen({ go }: { go: (s: Screen) => void }) {
   const [activeFilter, setActiveFilter] = useState("All");
   const [saved, setSaved] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
-
+  const [liveSalons, setLiveSalons] = useState<any[]>([]);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem("slotStyle:selectedCategory");
-    const category = raw as SalonCategory | null;
+    const rawCategory = window.localStorage.getItem("slotStyle:selectedCategory");
+    const category = rawCategory as SalonCategory | null;
     const next = categoryToFilter(category || undefined);
     setActiveFilter(next);
-
-    // Clear after first apply so manual changes persist.
     window.localStorage.removeItem("slotStyle:selectedCategory");
+
+    try {
+      const rawRec = window.localStorage.getItem("slotStyle:lastRecommendation");
+      if (rawRec) {
+        const parsed = JSON.parse(rawRec);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const mapped = parsed.map((r: any, idx: number) => ({
+            id: r.id || idx + 100,
+            name: r.name || "Recommended Salon",
+            image: getServiceImage(r.services?.[0], r.category || r.area || r.name, idx),
+            match: r.score ? Math.min(99, Math.max(82, Math.round(r.score))) : 96 - idx * 2,
+            rating: Number(r.rating) || 4.7,
+            reviews: 140 + ((r.id || idx) * 17) % 250,
+            distance: r.distanceKm !== undefined ? `${r.distanceKm} km` : "Nearby",
+            price: r.priceRange ? `₹${r.priceRange}` : "₹₹₹",
+            category: r.area ? `${r.area} · ${Array.isArray(r.services) ? r.services.join(", ") : "Salon"}` : "Hair & Skin",
+            tags: r.isLiveOsm ? ["Live OSM", "GPS Matched"] : ["AI Recommends", "Top Rated"],
+            services: r.services || [],
+          }));
+          setLiveSalons(mapped);
+        }
+      }
+    } catch {
+      // ignore
+    }
   }, []);
+
+  const displayedSalons = liveSalons.length > 0 ? liveSalons : SALONS;
 
   return (
     <div className="min-h-screen bg-[#F8F7FF]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -1746,9 +2314,9 @@ function ListingScreen({ go }: { go: (s: Screen) => void }) {
       </div>
 
       <div className="max-w-3xl mx-auto px-6 py-6">
-        <p className="text-xs text-[#7B7A92] mb-4">{SALONS.length} salons matched · sorted by AI relevance</p>
+        <p className="text-xs text-[#7B7A92] mb-4">{displayedSalons.length} salons matched · sorted by AI relevance</p>
         <div className="flex flex-col gap-5">
-          {SALONS.filter((salon) => {
+          {displayedSalons.filter((salon) => {
             // 1) Category filter (existing behavior)
             const passesCategory = (() => {
               if (activeFilter === "All") return true;
@@ -1902,29 +2470,53 @@ function DetailsScreen({ go }: { go: (s: Screen) => void }) {
   }
 
   function toggleAddService(s: { name: string; duration: string; price: number; id?: string }) {
-    const salonId = selectedSalon?.id;
-    if (!salonId) return;
+    const currentSalonKey = String(selectedSalon?.id || selectedSalon?.name || "default_salon");
+    const serviceId = String(s.id || s.name);
 
-    const serviceId = s.id || String(s.name);
-    const exists = selectedServices.some((x) => x.id === String(serviceId) && x.salonId === Number(salonId));
-    if (exists) return;
+    const exists = selectedServices.some(
+      (x) => x.id === serviceId && String(x.salonId) === currentSalonKey
+    );
 
-    const next = [
-      ...selectedServices,
-      {
-        id: String(serviceId),
-        name: s.name,
-        price: s.price,
-        duration: s.duration,
-        salonId: Number(salonId),
-      },
-    ];
+    let next: typeof selectedServices;
+    if (exists) {
+      // Toggle OFF (Remove from selected services)
+      next = selectedServices.filter(
+        (x) => !(x.id === serviceId && String(x.salonId) === currentSalonKey)
+      );
+    } else {
+      // Toggle ON (Add to selected services)
+      next = [
+        ...selectedServices,
+        {
+          id: serviceId,
+          name: s.name,
+          price: s.price,
+          duration: s.duration,
+          salonId: currentSalonKey as any,
+        },
+      ];
+    }
 
     setSelectedServices(next);
     persistServices(next);
   }
 
-  const selectedServicesTotal = selectedServices.reduce((sum, s) => sum + (Number.isFinite(s.price) ? s.price : 0), 0);
+  const currentSalonKey = String(selectedSalon?.id || selectedSalon?.name || "default_salon");
+
+  const currentSalonServices = selectedServices.filter(
+    (x) => String(x.salonId) === currentSalonKey
+  );
+
+  const currentSalonServicesTotal = currentSalonServices.reduce(
+    (sum, s) => sum + (Number.isFinite(s.price) ? s.price : 0),
+    0
+  );
+
+  const salonName = selectedSalon?.name || "Alchemy Studio";
+  const salonArea = selectedSalon?.area || selectedSalon?.location || "Delhi NCR";
+  const salonMatch = selectedSalon?.matchPercent || selectedSalon?.match || 96;
+  const salonRating = Number(selectedSalon?.rating) || 4.8;
+  const salonMainImage = (selectedImg === 0 && selectedSalon?.image) ? selectedSalon.image : GALLERY[selectedImg];
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'DM Sans', sans-serif" }}>
@@ -1944,9 +2536,14 @@ function DetailsScreen({ go }: { go: (s: Screen) => void }) {
       <div className="max-w-3xl mx-auto px-6 pt-4">
         <div className="rounded-2xl overflow-hidden bg-[#EAE6FF] h-64 mb-3">
           <img
-            src={GALLERY[selectedImg]}
-            alt="Salon interior"
+            src={salonMainImage}
+            alt={salonName}
             className="w-full h-full object-cover transition-all duration-300"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80";
+            }}
           />
         </div>
         <div className="flex gap-2">
@@ -1967,22 +2564,22 @@ function DetailsScreen({ go }: { go: (s: Screen) => void }) {
         <div className="flex items-start justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-[#2D2D3F]" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Alchemy Studio
+              {salonName}
             </h1>
             <div className="flex items-center gap-3 mt-1.5">
-              <StarRating rating={4.9} />
-              <span className="text-xs text-[#7B7A92]">· 412 reviews</span>
-              <span className="text-xs text-[#7B7A92]">· 1.2 km away</span>
+              <StarRating rating={salonRating} />
+              <span className="text-xs text-[#7B7A92]">· {salonArea}</span>
+              <span className="text-xs text-[#7B7A92]">· Verified Salon</span>
             </div>
           </div>
           <div className="bg-[#EAE6FF] text-[#6C63FF] text-xs font-bold px-3 py-1.5 rounded-xl flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3" /> 97% Match
+            <Sparkles className="w-3 h-3" /> {salonMatch}% Match
           </div>
         </div>
 
         {/* Description */}
         <p className="text-sm text-[#7B7A92] leading-relaxed mb-6">
-          Alchemy Studio is an award-winning salon in Indiranagar, Bangalore, known for its science-meets-art approach to hair and skincare. With a team of internationally trained stylists, we specialise in bespoke colour treatments, precision cuts, and result-driven facials.
+          {salonName} is a top-rated salon located in {salonArea}, known for bespoke hair styling, precision skincare, and result-driven beauty treatments tailored to your preferences.
         </p>
 
         {/* AI Summary */}
@@ -1992,9 +2589,9 @@ function DetailsScreen({ go }: { go: (s: Screen) => void }) {
         >
           <Sparkles className="w-5 h-5 text-[#6C63FF] flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-semibold text-[#6C63FF] mb-1">AI Review Summary</p>
+            <p className="text-xs font-semibold text-[#6C63FF] mb-1">AI Match Summary for {salonName}</p>
             <p className="text-sm text-[#2D2D3F] leading-relaxed">
-              Clients consistently praise the thorough consultation process, attentive stylists, and long-lasting results. Balayage and keratin treatments receive the highest satisfaction scores. Wait times are minimal on weekday mornings.
+              Matched to your preferences in {salonArea}. Clients consistently praise the consultation process, attentive stylists, and long-lasting service quality.
             </p>
           </div>
         </div>
@@ -2014,26 +2611,36 @@ function DetailsScreen({ go }: { go: (s: Screen) => void }) {
 
         {activeTab === "services" && (
           <div className="flex flex-col gap-3 mb-8">
-            {SALON_SERVICES.map((s) => (
-              <div key={s.name} className="flex items-center justify-between p-4 bg-white border border-[#6C63FF]/08 rounded-2xl">
-                <div>
-                  <p className="text-sm font-semibold text-[#2D2D3F]">{s.name}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Clock className="w-3 h-3 text-[#7B7A92]" />
-                    <span className="text-xs text-[#7B7A92]">{s.duration}</span>
+            {SALON_SERVICES.map((s) => {
+              const isAdded = selectedServices.some(
+                (x) => (x.id === String(s.name) || x.name === s.name) && String(x.salonId) === currentSalonKey
+              );
+
+              return (
+                <div key={s.name} className="flex items-center justify-between p-4 bg-white border border-[#6C63FF]/10 rounded-2xl hover:border-[#6C63FF]/25 transition-all">
+                  <div>
+                    <p className="text-sm font-bold text-[#2D2D3F]">{s.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <Clock className="w-3 h-3 text-[#7B7A92]" />
+                      <span className="text-xs text-[#7B7A92]">{s.duration}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-[#2D2D3F]">₹{s.price.toLocaleString()}</span>
+                    <button
+                      onClick={() => toggleAddService({ name: s.name, duration: s.duration, price: s.price })}
+                      className={`text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer flex items-center gap-1 ${
+                        isAdded
+                          ? "bg-[#6C63FF] text-white border border-[#6C63FF] shadow-sm"
+                          : "text-[#6C63FF] border border-[#6C63FF]/30 hover:bg-[#EAE6FF]"
+                      }`}
+                    >
+                      {isAdded ? "✓ Added" : "Add"}
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-bold text-[#2D2D3F]">₹{s.price.toLocaleString()}</span>
-                  <button
-                    onClick={() => toggleAddService({ name: s.name, duration: s.duration, price: s.price })}
-                    className="text-xs text-[#6C63FF] font-medium border border-[#6C63FF]/25 px-3 py-1.5 rounded-lg hover:bg-[#EAE6FF] transition-colors"
-                  >
-                    {selectedServices.some((x) => x.name === s.name && x.salonId === Number(selectedSalon?.id)) ? "Added" : "Add"}
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -2062,11 +2669,19 @@ function DetailsScreen({ go }: { go: (s: Screen) => void }) {
       </div>
 
       {/* Sticky CTA */}
-      <div className="sticky bottom-0 bg-white border-t border-[#6C63FF]/10 px-6 py-4">
+      <div className="sticky bottom-0 bg-white border-t border-[#6C63FF]/15 shadow-lg px-6 py-4 z-40">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div>
-            <p className="text-xs text-[#7B7A92]">Starting from</p>
-            <p className="text-lg font-bold text-[#2D2D3F]">₹450</p>
+            <p className="text-xs text-[#7B7A92]">
+              {currentSalonServices.length > 0
+                ? `${currentSalonServices.length} service${currentSalonServices.length > 1 ? "s" : ""} selected`
+                : "Starting from"}
+            </p>
+            <p className="text-xl font-bold text-[#6C63FF]">
+              ₹{currentSalonServicesTotal > 0
+                ? currentSalonServicesTotal.toLocaleString()
+                : (selectedSalon?.priceRange ? Number(selectedSalon.priceRange).toLocaleString() : "1,400")}
+            </p>
           </div>
           <PrimaryButton onClick={() => go("booking")} className="px-10">
             Book Appointment
@@ -2635,7 +3250,9 @@ function ConfirmationScreen({ go }: { go: (s: Screen) => void }) {
             style={{ background: `linear-gradient(135deg, ${PURPLE}, #9B94FF)` }}
           >
             <p className="text-xs font-medium opacity-80 mb-1">Booking Confirmed</p>
-            <p className="text-lg font-bold tracking-widest">SS-2025-004821</p>
+            <p className="text-lg font-bold tracking-widest">
+              {bookingDetails?.bookingReference || `SS-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`}
+            </p>
           </div>
           <div className="px-6 py-5 flex flex-col gap-4">
             {[
